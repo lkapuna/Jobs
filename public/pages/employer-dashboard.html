@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>דשבורד מעסיק — WorkHour</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --surface2: #f0ede8;
+      --border: rgba(0,0,0,0.08);
+      --accent: #c8502a;
+      --accent2: #2a6e4e;
+      --text: #1a1612;
+      --muted: #8a8480;
+      --sidebar-w: 250px;
+    }
+
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--text);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      right: 0;
+      top: 0;
+      height: 100vh;
+      z-index: 50;
+    }
+
+    .sidebar-logo {
+      padding: 30px 24px 22px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .logo-text { font-size: 1.5rem; font-weight: 900; color: #fff; }
+    .logo-text span { color: var(--accent); }
+    .logo-sub { font-size: 0.72rem; color: rgba(255,255,255,0.35); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 3px; }
+
+    .sidebar-nav { flex: 1; padding: 20px 12px; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      color: rgba(255,255,255,0.5);
+      font-size: 0.92rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.18s;
+      margin-bottom: 3px;
+    }
+
+    .nav-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
+    .nav-item.active { background: var(--accent); color: #fff; }
+    .nav-item .icon { font-size: 1.1rem; width: 22px; text-align: center; }
+
+    .nav-badge {
+      margin-right: auto;
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .nav-item.active .nav-badge { background: rgba(255,255,255,0.25); }
+
+    .sidebar-footer {
+      padding: 16px 12px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .employer-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px;
+    }
+
+    .emp-avatar {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 1rem; color: #fff;
+      flex-shrink: 0;
+    }
+
+    .emp-name { font-size: 0.88rem; font-weight: 700; color: #fff; }
+    .emp-role { font-size: 0.72rem; color: rgba(255,255,255,0.4); }
+
+    .logout-btn {
+      margin-right: auto;
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.3);
+      cursor: pointer;
+      font-size: 1rem;
+      transition: color 0.2s;
+    }
+    .logout-btn:hover { color: var(--accent); }
+
+    /* ── MAIN ── */
+    .main {
+      margin-right: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 36px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .page-title { font-size: 1.3rem; font-weight: 800; }
+    .page-sub { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+
+    .btn {
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-family: 'Heebo', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #a83e1e; transform: translateY(-1px); }
+    .btn-secondary { background: var(--surface2); color: var(--text); }
+    .btn-secondary:hover { background: #e5e0d8; }
+
+    .content { padding: 30px 36px; flex: 1; }
+
+    /* ── SECTIONS ── */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* ── STATS ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 24px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+    .stat-icon { font-size: 1.6rem; margin-bottom: 12px; }
+    .stat-val { font-size: 2rem; font-weight: 900; line-height: 1; color: var(--text); }
+    .stat-val.accent { color: var(--accent); }
+    .stat-val.green { color: var(--accent2); }
+    .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 6px; font-weight: 500; }
+
+    /* ── PANELS ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title { font-size: 1rem; font-weight: 700; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 36px;
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; }
+    .modal-sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 28px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      font-size: 0.83rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Heebo', sans-serif;
+      font-size: 0.92rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      background: #fff;
+    }
+
+    textarea { resize: vertical; min-height: 80px; }
+
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+
+    /* ── JOBS GRID ── */
+    .jobs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      padding: 20px;
+    }
+
+    .job-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .job-card:hover { border-color: var(--accent); box-shadow: 0 4px 20px rgba(200,80,42,0.1); }
+
+    .job-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .job-title { font-size: 1rem; font-weight: 700; }
+    .job-badge { font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+    .job-badge.active { background: rgba(42,110,78,0.12); color: var(--accent2); }
+    .job-badge.inactive { background: rgba(200,80,42,0.1); color: var(--accent); }
+
+    .job-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .job-tag {
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: var(--surface);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .job-rate { font-size: 1.3rem; font-weight: 900; color: var(--accent2); margin-bottom: 14px; }
+    .job-rate span { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+
+    .job-actions { display: flex; gap: 8px; }
+
+    .btn-sm {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-family: 'Heebo', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      transition: all 0.15s;
+    }
+
+    .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm-danger { border-color: rgba(200,80,42,0.2); color: var(--accent); background: rgba(200,80,42,0.05); }
+    .btn-sm-danger:hover { background: rgba(200,80,42,0.1); }
+    .btn-sm-success { border-color: rgba(42,110,78,0.2); color: var(--accent2); background: rgba(42,110,78,0.05); }
+    .btn-sm-success:hover { background: rgba(42,110,78,0.12); }
+
+    /* ── APPLICANTS ── */
+    .applicant-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    .applicant-card:last-child { border-bottom: none; }
+    .applicant-card:hover { background: var(--bg); }
+
+    .app-avatar {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: var(--surface2);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1rem; color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .app-info { flex: 1; }
+    .app-name { font-weight: 700; font-size: 0.95rem; }
+    .app-meta { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .app-message { font-size: 0.83rem; color: var(--text); margin-top: 6px; background: var(--bg); padding: 8px 12px; border-radius: 8px; }
+
+    .app-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    /* ── SESSIONS ── */
+    .session-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .session-row:last-child { border-bottom: none; }
+    .session-info { flex: 1; }
+    .session-worker { font-weight: 700; font-size: 0.92rem; }
+    .session-time { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .session-hours { font-size: 1.2rem; font-weight: 900; color: var(--accent); min-width: 60px; text-align: center; }
+    .session-pay { font-size: 0.85rem; color: var(--accent2); font-weight: 700; min-width: 80px; text-align: center; }
+
+    /* BADGES */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .badge-pending { background: rgba(200,80,42,0.1); color: var(--accent); }
+    .badge-approved { background: rgba(42,110,78,0.1); color: var(--accent2); }
+    .badge-active { background: rgba(42,110,78,0.1); color: var(--accent2); }
+    .badge-interested { background: rgba(42,110,78,0.1); color: var(--accent2); }
+    .badge-rejected { background: rgba(200,80,42,0.1); color: var(--accent); }
+    .badge-disputed { background: rgba(200,80,42,0.15); color: var(--accent); }
+
+    /* EMPTY + LOADING */
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--muted); }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--text);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { background: var(--accent2); }
+    .toast.error { background: var(--accent); }
+
+    /* APPROVE MODAL */
+    .approve-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .approve-modal.open { display: flex; }
+
+    .approve-box {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 440px;
+      margin: 20px;
+    }
+
+    .approve-box h3 { font-size: 1.2rem; font-weight: 800; margin-bottom: 20px; }
+    .approve-actions { display: flex; flex-direction: column; gap: 10px; }
+
+    .approve-btn {
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-family: 'Heebo', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: right;
+      transition: all 0.15s;
+    }
+
+    .approve-btn:hover { transform: translateX(-3px); }
+    .approve-btn.approve { background: rgba(42,110,78,0.1); color: var(--accent2); border-color: rgba(42,110,78,0.2); }
+    .approve-btn.dispute { background: rgba(200,80,42,0.08); color: var(--accent); border-color: rgba(200,80,42,0.2); }
+    .approve-btn.cancel { background: var(--bg); color: var(--muted); }
+
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .sidebar { display: none; }
+      .main { margin-right: 0; }
+      .content { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">Work<span>Hour</span></div>
+    <div class="logo-sub">פאנל מעסיק</div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-item active" onclick="navigate('overview')">
+      <span class="icon">📊</span> סקירה כללית
+    </div>
+    <div class="nav-item" onclick="navigate('jobs')">
+      <span class="icon">💼</span> המשרות שלי
+    </div>
+    <div class="nav-item" onclick="navigate('applicants')">
+      <span class="icon">👥</span> מועמדים
+      <span class="nav-badge" id="appBadge" style="display:none">0</span>
+    </div>
+    <div class="nav-item" onclick="navigate('sessions')">
+      <span class="icon">⏱️</span> אישור שעות
+      <span class="nav-badge" id="sessionBadge" style="display:none">0</span>
+    </div>
+    <div class="nav-item" onclick="navigate('history')">
+      <span class="icon">📋</span> היסטוריה
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="employer-chip">
+      <div class="emp-avatar" id="empInitial">מ</div>
+      <div>
+        <div class="emp-name" id="empName">טוען...</div>
+        <div class="emp-role">מעסיק</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">⏻</button>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title" id="pageTitle">סקירה כללית</div>
+      <div class="page-sub" id="pageSub">ברוך הבא לפאנל המעסיק</div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" onclick="refreshCurrent()">↻ רענון</button>
+      <button class="btn btn-primary" onclick="openPostJob()" id="postJobBtn" style="display:none">+ פרסם משרה</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div class="section active" id="section-overview">
+      <div class="stats-grid" id="statsGrid">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">משמרות ממתינות לאישור</span>
+        </div>
+        <div id="pendingSessions"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- JOBS -->
+    <div class="section" id="section-jobs">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">המשרות שפרסמתי</span>
+          <button class="btn btn-primary" onclick="openPostJob()">+ פרסם משרה חדשה</button>
+        </div>
+        <div class="jobs-grid" id="jobsGrid">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APPLICANTS -->
+    <div class="section" id="section-applicants">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">מועמדים שפנו למשרות שלי</span>
+        </div>
+        <div id="applicantsList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- SESSIONS (pending approval) -->
+    <div class="section" id="section-sessions">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">שעות ממתינות לאישור שלך</span>
+        </div>
+        <div id="sessionsList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="section" id="section-history">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">היסטוריית משמרות</span>
+        </div>
+        <div id="historyList"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- MODAL: פרסום משרה -->
+<div class="modal-overlay" id="postJobModal">
+  <div class="modal">
+    <h3>פרסום משרה חדשה</h3>
+    <p class="modal-sub">מלא את הפרטים ומועמדים יוכלו לפנות אליך</p>
+    <form id="postJobForm">
+      <div class="form-group">
+        <label>שם המשרה *</label>
+        <input type="text" id="j_title" placeholder="קופאי/ת, עובד מחסן..." required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>אזור *</label>
+          <select id="j_area" required>
+            <option value="">בחר אזור</option>
+            <option>תל אביב והמרכז</option>
+            <option>ירושלים</option>
+            <option>חיפה והצפון</option>
+            <option>באר שבע והדרום</option>
+            <option>השרון</option>
+            <option>שפלה</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>כתובת *</label>
+          <input type="text" id="j_address" placeholder="רחוב ומספר" required>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>שכר לשעה (₪) *</label>
+          <input type="number" id="j_rate" placeholder="50" min="30" required>
+        </div>
+        <div class="form-group">
+          <label>סוג עבודה</label>
+          <select id="j_type">
+            <option value="זמנית">זמנית</option>
+            <option value="קבועה">קבועה</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>מקצוע *</label>
+          <input type="text" id="j_profession" placeholder="שירות, לוגיסטיקה..." required>
+        </div>
+        <div class="form-group">
+          <label>שעות עבודה</label>
+          <input type="text" id="j_hours" placeholder="09:00-17:00">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>ימים</label>
+        <input type="text" id="j_days" placeholder="ראשון-חמישי">
+      </div>
+      <div class="form-group">
+        <label>תיאור ודרישות</label>
+        <textarea id="j_desc" placeholder="תאר את המשרה, הדרישות, וכל מידע רלוונטי..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closePostJob()">ביטול</button>
+        <button type="submit" class="btn btn-primary" id="postJobSubmit">פרסם משרה</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: אישור שעות -->
+<div class="approve-modal" id="approveModal">
+  <div class="approve-box">
+    <h3 id="approveTitle">אישור שעות עבודה</h3>
+    <div id="approveInfo" style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:20px;font-size:0.88rem;line-height:1.8;"></div>
+    <div class="approve-actions">
+      <button class="approve-btn approve" onclick="approveSession('approve')">✓ אשר את השעות</button>
+      <button class="approve-btn dispute" onclick="openDisputeInput()">⚠️ פתח מחלוקת</button>
+      <div id="disputeInput" style="display:none">
+        <textarea id="disputeReason" placeholder="תאר את הבעיה..." style="margin-bottom:8px"></textarea>
+        <button class="approve-btn dispute" onclick="approveSession('dispute')">שלח מחלוקת</button>
+      </div>
+      <button class="approve-btn cancel" onclick="closeApproveModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = '';
+  const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  if (!token || user.role !== 'employer') window.location = '/pages/login.html';
+
+  // שם המעסיק
+  document.getElementById('empName').textContent = user.name || 'מעסיק';
+  document.getElementById('empInitial').textContent = (user.name || 'מ')[0];
+
+  const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` });
+  const fmt = n => new Intl.NumberFormat('he-IL').format(Math.round(n || 0));
+  const fmtDate = d => new Date(d).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'2-digit' });
+  const fmtTime = d => new Date(d).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
+
+  let currentSection = 'overview';
+  let currentSessionId = null;
+
+  const pageMeta = {
+    overview:   { title: 'סקירה כללית', sub: 'ברוך הבא לפאנל המעסיק', btn: false },
+    jobs:       { title: 'המשרות שלי', sub: 'ניהול משרות שפרסמת', btn: true },
+    applicants: { title: 'מועמדים', sub: 'עובדים שפנו למשרות שלך', btn: false },
+    sessions:   { title: 'אישור שעות', sub: 'משמרות הממתינות לאישורך', btn: false },
+    history:    { title: 'היסטוריה', sub: 'כל המשמרות שאושרו', btn: false },
+  };
+
+  function navigate(section) {
+    currentSection = section;
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll(`[onclick="navigate('${section}')"]`).forEach(el => el.classList.add('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(`section-${section}`).classList.add('active');
+    const meta = pageMeta[section];
+    document.getElementById('pageTitle').textContent = meta.title;
+    document.getElementById('pageSub').textContent = meta.sub;
+    document.getElementById('postJobBtn').style.display = meta.btn ? 'block' : 'none';
+    loadSection(section);
+  }
+
+  function refreshCurrent() { loadSection(currentSection); }
+
+  function loadSection(s) {
+    if (s === 'overview') loadOverview();
+    else if (s === 'jobs') loadJobs();
+    else if (s === 'applicants') loadApplicants();
+    else if (s === 'sessions') loadSessions();
+    else if (s === 'history') loadHistory();
+  }
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast show ${type}`;
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // ── OVERVIEW ──
+  async function loadOverview() {
+    try {
+      const [jobsRes, sessionsRes] = await Promise.all([
+        fetch(`${API}/api/jobs/my`, { headers: headers() }),
+        fetch(`${API}/api/sessions/employer`, { headers: headers() })
+      ]);
+
+      const jobs = jobsRes.ok ? await jobsRes.json() : [];
+      const sessions = sessionsRes.ok ? await sessionsRes.json() : [];
+
+      const totalApplicants = jobs.reduce((s, j) => s + (j.applicants?.length || 0), 0);
+      const pendingCount = sessions.length;
+
+      if (pendingCount > 0) {
+        document.getElementById('sessionBadge').textContent = pendingCount;
+        document.getElementById('sessionBadge').style.display = 'inline';
+      }
+
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-icon">💼</div>
+          <div class="stat-val accent">${jobs.length}</div>
+          <div class="stat-label">משרות פעילות</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-val">${totalApplicants}</div>
+          <div class="stat-label">סה"כ מועמדים</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-val accent">${pendingCount}</div>
+          <div class="stat-label">שעות לאישור</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏢</div>
+          <div class="stat-val green">${user.name?.split(' ')[0] || '—'}</div>
+          <div class="stat-label">שם העסק</div>
+        </div>
+      `;
+
+      // משמרות ממתינות
+      document.getElementById('pendingSessions').innerHTML = sessions.length ? `
+        ${sessions.map(s => `
+          <div class="session-row">
+            <div class="app-avatar">${(s.worker?.firstName || '?')[0]}</div>
+            <div class="session-info">
+              <div class="session-worker">${s.worker?.firstName || ''} ${s.worker?.lastName || ''}</div>
+              <div class="session-time">${fmtDate(s.date)} · ${fmtTime(s.startTime)} — ${s.endTime ? fmtTime(s.endTime) : 'פעיל'}</div>
+            </div>
+            <div class="session-hours">${s.totalHours}h</div>
+            <div class="session-pay">₪${fmt(s.grossPay)}</div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-sm btn-sm-success" onclick="openApproveModal('${s._id}', '${s.worker?.firstName} ${s.worker?.lastName}', ${s.totalHours}, ${s.grossPay})">אשר</button>
+            </div>
+          </div>
+        `).join('')}
+      ` : '<div class="empty-state"><div class="empty-icon">✅</div><p>אין שעות ממתינות לאישור</p></div>';
+
+    } catch(e) {
+      document.getElementById('statsGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>';
+    }
+  }
+
+  // ── JOBS ──
+  async function loadJobs() {
+    document.getElementById('jobsGrid').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const res = await fetch(`${API}/api/jobs/my`, { headers: headers() });
+      const jobs = res.ok ? await res.json() : [];
+
+      document.getElementById('jobsGrid').innerHTML = jobs.length ? jobs.map(j => `
+        <div class="job-card">
+          <div class="job-card-header">
+            <div class="job-title">${j.title}</div>
+            <span class="job-badge ${j.isActive ? 'active' : 'inactive'}">${j.isActive ? 'פעילה' : 'לא פעילה'}</span>
+          </div>
+          <div class="job-meta">
+            <span class="job-tag">📍 ${j.area}</span>
+            <span class="job-tag">🔧 ${j.profession}</span>
+            <span class="job-tag">${j.jobType}</span>
+            ${j.hours ? `<span class="job-tag">🕐 ${j.hours}</span>` : ''}
+          </div>
+          <div class="job-rate">₪${j.hourlyRate} <span>לשעה</span></div>
+          <div class="job-actions">
+            <button class="btn-sm" onclick="navigate('applicants')">
+              👥 ${j.applicants?.length || 0} מועמדים
+            </button>
+          </div>
+        </div>
+      `).join('') + '<div class="job-card" style="border:2px dashed var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:180px;color:var(--muted);font-weight:700;font-size:0.95rem;flex-direction:column;gap:8px" onclick="openPostJob()"><span style="font-size:2rem">+</span>פרסם משרה חדשה</div>'
+      : '<div style="padding:20px"><div class="empty-state"><div class="empty-icon">💼</div><p>עדיין לא פרסמת משרות</p><button class="btn btn-primary" style="margin-top:16px" onclick="openPostJob()">פרסם משרה ראשונה</button></div></div>';
+    } catch(e) {
+      document.getElementById('jobsGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>';
+    }
+  }
+
+  // ── APPLICANTS ──
+  async function loadApplicants() {
+    document.getElementById('applicantsList').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const res = await fetch(`${API}/api/jobs/my`, { headers: headers() });
+      const jobs = res.ok ? await res.json() : [];
+
+      const allApplicants = [];
+      jobs.forEach(j => {
+        (j.applicants || []).forEach(a => {
+          allApplicants.push({ ...a, jobTitle: j.title, jobId: j._id });
+        });
+      });
+
+      const pending = allApplicants.filter(a => a.status === 'pending');
+      if (pending.length) {
+        document.getElementById('appBadge').textContent = pending.length;
+        document.getElementById('appBadge').style.display = 'inline';
+      }
+
+      document.getElementById('applicantsList').innerHTML = allApplicants.length ? allApplicants.map(a => `
+        <div class="applicant-card">
+          <div class="app-avatar">${(a.worker?.firstName || '?')[0]}</div>
+          <div class="app-info">
+            <div class="app-name">${a.worker?.firstName || ''} ${a.worker?.lastName || ''}</div>
+            <div class="app-meta">📍 ${a.worker?.area || '—'} · 🔧 ${a.worker?.profession || '—'} · למשרה: <strong>${a.jobTitle}</strong></div>
+            ${a.message ? `<div class="app-message">"${a.message}"</div>` : ''}
+          </div>
+          <div class="app-actions">
+            <span class="badge badge-${a.status}">${a.status === 'pending' ? 'ממתין' : a.status === 'interested' ? 'מעוניין ✓' : 'נדחה'}</span>
+            ${a.status === 'pending' ? `
+              <button class="btn-sm btn-sm-success" onclick="updateApplicant('${a.jobId}', '${a.worker?._id}', 'interested')">✓ מעוניין</button>
+              <button class="btn-sm btn-sm-danger" onclick="updateApplicant('${a.jobId}', '${a.worker?._id}', 'rejected')">✕ דחה</button>
+            ` : ''}
+          </div>
+        </div>
+      `).join('') : '<div class="empty-state"><div class="empty-icon">👥</div><p>אין מועמדים עדיין</p></div>';
+    } catch(e) {
+      document.getElementById('applicantsList').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>';
+    }
+  }
+
+  async function updateApplicant(jobId, workerId, status) {
+    try {
+      const res = await fetch(`${API}/api/jobs/${jobId}/applicants/${workerId}`, {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify({ status })
+      });
+      if (!res.ok) throw new Error();
+      showToast(status === 'interested' ? 'סומנת כמעוניין ✓' : 'המועמד נדחה');
+      loadApplicants();
+    } catch(e) { showToast('שגיאה', 'error'); }
+  }
+
+  // ── SESSIONS (pending) ──
+  async function loadSessions() {
+    document.getElementById('sessionsList').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const res = await fetch(`${API}/api/sessions/employer`, { headers: headers() });
+      const sessions = res.ok ? await res.json() : [];
+
+      document.getElementById('sessionsList').innerHTML = sessions.length ? sessions.map(s => `
+        <div class="session-row">
+          <div class="app-avatar">${(s.worker?.firstName || '?')[0]}</div>
+          <div class="session-info">
+            <div class="session-worker">${s.worker?.firstName || ''} ${s.worker?.lastName || ''}</div>
+            <div class="session-time">${fmtDate(s.date)} · ${fmtTime(s.startTime)} — ${s.endTime ? fmtTime(s.endTime) : 'פעיל'}</div>
+          </div>
+          <div class="session-hours">${s.totalHours}h</div>
+          <div class="session-pay">₪${fmt(s.grossPay)}</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-sm btn-sm-success" onclick="openApproveModal('${s._id}', '${s.worker?.firstName} ${s.worker?.lastName}', ${s.totalHours}, ${s.grossPay})">אשר / דון</button>
+          </div>
+        </div>
+      `).join('') : '<div class="empty-state"><div class="empty-icon">✅</div><p>אין שעות ממתינות לאישור</p></div>';
+    } catch(e) {
+      document.getElementById('sessionsList').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div></div>';
+    }
+  }
+
+  // ── HISTORY ──
+  async function loadHistory() {
+    document.getElementById('historyList').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const res = await fetch(`${API}/api/sessions/employer/history`, { headers: headers() });
+      const sessions = res.ok ? await res.json() : [];
+
+      document.getElementById('historyList').innerHTML = sessions.length ? `
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:var(--bg)">
+              <th style="padding:12px 24px;text-align:right;font-size:0.75rem;color:var(--muted);font-weight:700;letter-spacing:0.06em">עובד</th>
+              <th style="padding:12px 24px;text-align:right;font-size:0.75rem;color:var(--muted);font-weight:700">תאריך</th>
+              <th style="padding:12px 24px;text-align:right;font-size:0.75rem;color:var(--muted);font-weight:700">שעות</th>
+              <th style="padding:12px 24px;text-align:right;font-size:0.75rem;color:var(--muted);font-weight:700">עלות</th>
+              <th style="padding:12px 24px;text-align:right;font-size:0.75rem;color:var(--muted);font-weight:700">סטטוס</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sessions.map(s => `
+              <tr style="border-top:1px solid var(--border)">
+                <td style="padding:14px 24px;font-weight:600">${s.worker?.firstName || ''} ${s.worker?.lastName || ''}</td>
+                <td style="padding:14px 24px;color:var(--muted);font-size:0.85rem">${fmtDate(s.date)}</td>
+                <td style="padding:14px 24px;font-weight:700">${s.totalHours}h</td>
+                <td style="padding:14px 24px;color:var(--accent);font-weight:700">₪${fmt(s.totalEmployerCost)}</td>
+                <td style="padding:14px 24px"><span class="badge badge-${s.status}">${s.status === 'approved' ? 'מאושר ✓' : s.status === 'disputed' ? 'מחלוקת ⚠️' : s.status}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<div class="empty-state"><div class="empty-icon">📋</div><p>אין היסטוריה עדיין</p></div>';
+    } catch(e) {
+      document.getElementById('historyList').innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>אין היסטוריה עדיין</p></div>';
+    }
+  }
+
+  // ── POST JOB MODAL ──
+  function openPostJob() { document.getElementById('postJobModal').classList.add('open'); }
+  function closePostJob() { document.getElementById('postJobModal').classList.remove('open'); }
+
+  document.getElementById('postJobForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('postJobSubmit');
+    btn.textContent = 'מפרסם...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`${API}/api/jobs`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({
+          title: document.getElementById('j_title').value,
+          area: document.getElementById('j_area').value,
+          address: document.getElementById('j_address').value,
+          hourlyRate: Number(document.getElementById('j_rate').value),
+          jobType: document.getElementById('j_type').value,
+          profession: document.getElementById('j_profession').value,
+          hours: document.getElementById('j_hours').value,
+          days: document.getElementById('j_days').value.split(',').map(d => d.trim()),
+          description: document.getElementById('j_desc').value
+        })
+      });
+
+      if (!res.ok) throw new Error();
+      showToast('המשרה פורסמה בהצלחה! 🎉');
+      closePostJob();
+      document.getElementById('postJobForm').reset();
+      navigate('jobs');
+    } catch(e) {
+      showToast('שגיאה בפרסום', 'error');
+    } finally {
+      btn.textContent = 'פרסם משרה';
+      btn.disabled = false;
+    }
+  });
+
+  // ── APPROVE MODAL ──
+  function openApproveModal(sessionId, workerName, hours, pay) {
+    currentSessionId = sessionId;
+    document.getElementById('approveTitle').textContent = `אישור שעות — ${workerName}`;
+    document.getElementById('approveInfo').innerHTML = `
+      <strong>⏱️ שעות עבודה:</strong> ${hours} שעות<br>
+      <strong>💰 שכר גולמי:</strong> ₪${fmt(pay)}<br>
+      <strong>📊 עמלת אפליקציה:</strong> ₪${fmt(hours * 3)}<br>
+      <strong>💳 סה"כ עלות לך:</strong> ₪${fmt(pay + hours * 3)}
+    `;
+    document.getElementById('disputeInput').style.display = 'none';
+    document.getElementById('approveModal').classList.add('open');
+  }
+
+  function closeApproveModal() {
+    document.getElementById('approveModal').classList.remove('open');
+    currentSessionId = null;
+  }
+
+  function openDisputeInput() {
+    document.getElementById('disputeInput').style.display = 'block';
+  }
+
+  async function approveSession(action) {
+    try {
+      const body = { action };
+      if (action === 'dispute') {
+        body.disputeReason = document.getElementById('disputeReason').value;
+        if (!body.disputeReason) return showToast('נא לתאר את הבעיה', 'error');
+      }
+
+      const res = await fetch(`${API}/api/sessions/${currentSessionId}/approve`, {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) throw new Error();
+      closeApproveModal();
+      showToast(action === 'approve' ? 'השעות אושרו ✓' : 'המחלוקת נפתחה ⚠️');
+      loadOverview();
+      loadSessions();
+    } catch(e) { showToast('שגיאה', 'error'); }
+  }
+
+  function logout() {
+    localStorage.clear();
+    window.location = '/pages/login.html';
+  }
+
+  // Init
+  loadOverview();
+</script>
+</body>
+</html>
