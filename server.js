@@ -8,55 +8,53 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*' }
-});
+const io = new Server(server, { cors: { origin: '*' } });
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// MongoDB
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB מחובר'))
+  .then(async () => {
+    console.log('✅ MongoDB מחובר');
+    try {
+      const bcrypt = require('bcryptjs');
+      const User = require('./models/User');
+      const existing = await User.findOne({ role: 'admin' });
+      if (!existing) {
+        const password = await bcrypt.hash('Admin1234!', 10);
+        await User.create({
+          role: 'admin',
+          email: 'lkapuna@gmail.com',
+          password,
+          phone: '0500000000',
+          isActive: true
+        });
+        console.log('✅ אדמין נוצר: lkapuna@gmail.com / Admin1234!');
+      } else {
+        console.log('✅ אדמין קיים במערכת');
+      }
+    } catch(e) {
+      console.error('שגיאה ביצירת אדמין:', e.message);
+    }
+  })
   .catch(err => console.error('❌ שגיאת MongoDB:', err));
 
-// Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/admin', require('./routes/admin'));
 
-// Socket.io - צ'אט בזמן אמת
-const activeChats = {};
-
 io.on('connection', (socket) => {
-  console.log('משתמש התחבר:', socket.id);
-
-  socket.on('join_chat', (chatId) => {
-    socket.join(chatId);
-  });
-
+  socket.on('join_chat', (chatId) => socket.join(chatId));
   socket.on('send_message', ({ chatId, message, sender }) => {
-    io.to(chatId).emit('receive_message', {
-      message,
-      sender,
-      time: new Date().toISOString()
-    });
-  });
-
-  socket.on('disconnect', () => {
-    console.log('משתמש התנתק:', socket.id);
+    io.to(chatId).emit('receive_message', { message, sender, time: new Date().toISOString() });
   });
 });
 
-// Fallback לדפי HTML
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`🚀 השרת רץ על פורט ${PORT}`);
-});
+server.listen(PORT, () => console.log(`🚀 השרת רץ על פורט ${PORT}`));
