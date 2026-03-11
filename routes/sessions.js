@@ -107,3 +107,15 @@ router.patch('/:id/approve', auth, requireRole('employer'), async (req, res) => 
 });
 
 module.exports = router;
+
+// GET /api/sessions/employer/history - כל המשמרות של המעסיק
+router.get('/employer/history', auth, requireRole('employer'), async (req, res) => {
+  try {
+    const sessions = await WorkSession.find({ employer: req.user._id })
+      .populate('worker', 'firstName lastName')
+      .sort({ date: -1 });
+    res.json(sessions);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאה' });
+  }
+});
