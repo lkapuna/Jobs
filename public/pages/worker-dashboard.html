@@ -152,14 +152,123 @@
     .toast.success { border-color:rgba(0,200,150,0.4); color:var(--accent); }
     .toast.error { border-color:rgba(233,69,96,0.4); color:#e94560; }
 
-    .filter-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; background:var(--surface); border:1px solid var(--border); border-radius:20px; cursor:pointer; font-size:0.82rem; transition:all 0.15s; }
-    .filter-chip:has(input:checked) { background:rgba(0,200,150,0.12); border-color:var(--accent); color:var(--accent); }
-    .filter-chip input { accent-color:var(--accent); width:12px; height:12px; }
     @media (max-width:768px) { .sidebar { display:none; } .main { margin-right:0; } .content { padding:20px 16px; } .stats-grid { grid-template-columns:1fr 1fr; } }
+    /* ══════════════════════════════
+       MOBILE-FIRST RESPONSIVE SYSTEM
+       ══════════════════════════════ */
+
+    /* Bottom nav - mobile only */
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      z-index: 100;
+      padding: 0;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .bottom-nav-items {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+    .bottom-nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 4px 8px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.65rem;
+      font-weight: 600;
+      gap: 3px;
+      transition: color 0.2s;
+      position: relative;
+      min-width: 0;
+    }
+    .bottom-nav-item.active { color: var(--accent); }
+    .bottom-nav-item .bnav-icon { font-size: 1.3rem; line-height: 1; }
+    .bottom-nav-item .bnav-label { font-size: 0.6rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 56px; text-align: center; }
+    .bottom-nav-item .bnav-badge {
+      position: absolute;
+      top: 6px;
+      right: 50%;
+      transform: translateX(8px);
+      background: var(--accent);
+      color: #000;
+      font-size: 0.55rem;
+      font-weight: 900;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Mobile topbar */
+    .mobile-topbar {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 16px;
+      align-items: center;
+      gap: 12px;
+    }
+    .mobile-logo { font-size: 1.2rem; font-weight: 900; color: #fff; }
+    .mobile-logo span { color: var(--accent); }
+    .mobile-page-title { font-size: 1rem; font-weight: 800; flex: 1; }
+    .mobile-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 0.85rem; color: #000;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none !important; }
+      .topbar { display: none !important; }
+      .mobile-topbar { display: flex; }
+      .bottom-nav { display: block; }
+      .main { margin-right: 0 !important; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+      .content { padding: 16px 14px; }
+      .stats-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+      .stat-card { padding: 14px 16px !important; }
+      .stat-val { font-size: 1.5rem !important; }
+      .jobs-grid { grid-template-columns: 1fr !important; }
+      .earnings-summary { grid-template-columns: 1fr 1fr !important; }
+      .panel { border-radius: 12px; }
+      .form-row { grid-template-columns: 1fr !important; }
+      table { font-size: 0.8rem; }
+      td, th { padding: 10px 12px !important; }
+      .chat-box { width: calc(100vw - 16px) !important; height: calc(100vh - 80px) !important; border-radius: 16px 16px 0 0 !important; }
+      .chat-overlay { align-items: flex-end !important; justify-content: center !important; padding: 0 8px !important; }
+      .search-bar { flex-direction: column; }
+      .search-bar > * { width: 100%; }
+      .modal { padding: 24px 16px !important; margin: 8px !important; max-height: 85vh !important; }
+    }
+
   </style>
 <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+
+
+<div class="mobile-topbar">
+  <div class="mobile-logo">Work<span>Hour</span></div>
+  <div class="mobile-page-title" id="mobilePageTitle">סקירה כללית</div>
+  <div class="mobile-avatar" id="mobileAvatar" onclick="navigate('profile')">ע</div>
+</div>
 
 <aside class="sidebar">
   <div class="sidebar-logo">
@@ -175,13 +284,13 @@
     <div class="nav-item" onclick="navigate('messages')"><span class="icon">💬</span> הודעות <span class="nav-badge" id="msgBadge" style="display:none">0</span></div>
   </nav>
   <div class="sidebar-footer">
-    <div class="worker-chip" style="cursor:pointer" onclick="openEditProfile()">
+    <div class="worker-chip">
       <div class="w-avatar" id="wInitial">ע</div>
       <div>
         <div class="w-name" id="wName">טוען...</div>
-        <div class="w-role" style="color:rgba(255,255,255,0.3)">✏️ ערוך פרטים</div>
+        <div class="w-role">עובד</div>
       </div>
-      <button class="logout-btn" onclick="event.stopPropagation();logout()">⏻</button>
+      <button class="logout-btn" onclick="logout()">⏻</button>
     </div>
   </div>
 </aside>
@@ -226,21 +335,21 @@
     <!-- JOBS -->
     <div class="section" id="section-jobs">
       <div class="search-bar">
-        <input type="text" class="search-input" id="jobSearch" placeholder="🔍 חיפוש לפי שם משרה..." oninput="filterJobs()" style="flex:1;min-width:180px">
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
-        <span style="font-size:0.8rem;color:var(--muted);align-self:center;margin-left:6px">אזור:</span>
-        <label class="filter-chip"><input type="checkbox" value="תל אביב והמרכז" onchange="filterJobs()"> ת"א והמרכז</label>
-        <label class="filter-chip"><input type="checkbox" value="ירושלים" onchange="filterJobs()"> ירושלים</label>
-        <label class="filter-chip"><input type="checkbox" value="חיפה והצפון" onchange="filterJobs()"> חיפה והצפון</label>
-        <label class="filter-chip"><input type="checkbox" value="באר שבע והדרום" onchange="filterJobs()"> דרום</label>
-        <label class="filter-chip"><input type="checkbox" value="השרון" onchange="filterJobs()"> השרון</label>
-        <label class="filter-chip"><input type="checkbox" value="שפלה" onchange="filterJobs()"> שפלה</label>
-        <span style="font-size:0.8rem;color:var(--muted);align-self:center;margin-right:8px;margin-left:6px">סוג:</span>
-        <label class="filter-chip"><input type="checkbox" value="זמנית" onchange="filterJobs()"> זמנית</label>
-        <label class="filter-chip"><input type="checkbox" value="קבועה" onchange="filterJobs()"> קבועה</label>
-        <label class="filter-chip"><input type="checkbox" value="משמרות" onchange="filterJobs()"> משמרות</label>
-        <label class="filter-chip"><input type="checkbox" value="סופי שבוע" onchange="filterJobs()"> סופי שבוע</label>
+        <input type="text" class="search-input" id="jobSearch" placeholder="🔍 חיפוש לפי שם משרה..." oninput="filterJobs()">
+        <select class="filter-select" id="areaFilter" onchange="filterJobs()">
+          <option value="">כל האזורים</option>
+          <option>תל אביב והמרכז</option>
+          <option>ירושלים</option>
+          <option>חיפה והצפון</option>
+          <option>באר שבע והדרום</option>
+          <option>השרון</option>
+          <option>שפלה</option>
+        </select>
+        <select class="filter-select" id="typeFilter" onchange="filterJobs()">
+          <option value="">כל הסוגים</option>
+          <option value="זמנית">זמנית</option>
+          <option value="קבועה">קבועה</option>
+        </select>
       </div>
       <div class="jobs-grid" id="jobsGrid">
         <div class="loading"><div class="spinner"></div></div>
@@ -261,13 +370,48 @@
     <!-- HISTORY -->
     <div class="section" id="section-history">
       <div class="panel">
-        <div class="panel-header"><span class="panel-title">היסטוריית משמרות</span></div>
+        <div class="panel-header">
+          <span class="panel-title">היסטוריית משמרות</span>
+          <button onclick="downloadExcel()" style="padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer">📥 הורד Excel</button>
+        </div>
         <div id="historyTable"><div class="loading"><div class="spinner"></div></div></div>
       </div>
     </div>
 
   </div>
 </main>
+
+    <!-- PROFILE SECTION -->
+    <div class="section" id="section-profile">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">עריכת הפרטים שלי</span></div>
+        <div style="padding:32px;max-width:560px">
+          <form id="profileForm">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+              <div><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">שם פרטי</label>
+              <input id="pFirstName" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none" type="text"></div>
+              <div><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">שם משפחה</label>
+              <input id="pLastName" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none" type="text"></div>
+            </div>
+            <div style="margin-bottom:16px"><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">טלפון</label>
+            <input id="pPhone" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none" type="tel"></div>
+            <div style="margin-bottom:16px"><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">מקצוע / תחום</label>
+            <input id="pProfession" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none" type="text"></div>
+            <div style="margin-bottom:16px"><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">אזורים מועדפים לעבודה</label>
+            <div id="pAreaCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px"></div></div>
+            <div style="margin-bottom:16px"><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">סוגי משרות מועדפים</label>
+            <div id="pTypeCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px"></div></div>
+            <div style="margin-bottom:24px"><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">על עצמי</label>
+            <textarea id="pBio" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none;resize:vertical;min-height:80px" placeholder="ספר קצת על הניסיון שלך..."></textarea></div>
+            <div style="margin-bottom:24px">
+              <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">סיסמה חדשה (אופציונלי)</label>
+              <input id="pPassword" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none" type="password" placeholder="השאר ריק לא לשנות">
+            </div>
+            <button type="submit" style="padding:13px 32px;background:var(--accent);border:none;border-radius:10px;color:#000;font-family:Heebo,sans-serif;font-size:1rem;font-weight:800;cursor:pointer;transition:all 0.2s">שמור שינויים</button>
+          </form>
+        </div>
+      </div>
+    </div>
 
     <!-- MESSAGES SECTION -->
     <div class="section" id="section-messages">
@@ -303,6 +447,8 @@
 
   document.getElementById('wName').textContent = user.name || 'עובד';
   document.getElementById('wInitial').textContent = (user.name || 'ע')[0];
+  const mAvatar = document.getElementById('mobileAvatar');
+  if (mAvatar) mAvatar.textContent = (user.name || 'ע')[0];
 
   const headers = () => ({ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` });
   const fmt = n => new Intl.NumberFormat('he-IL').format(Math.round(n||0));
@@ -322,6 +468,7 @@
     jobs:     { title:'חיפוש עבודה', sub:'מצא את המשרה המתאימה לך' },
     earnings: { title:'הרווחים שלי', sub:'מעקב שכר ותשלומים' },
     history:  { title:'היסטוריה', sub:'כל המשמרות שלך' },
+    profile:  { title:'הפרטים שלי', sub:'עריכת פרטים אישיים' },
     messages: { title:'הודעות', sub:'שיחות עם מעסיקים' },
   };
 
@@ -333,7 +480,14 @@
     document.getElementById(`section-${s}`).classList.add('active');
     document.getElementById('pageTitle').textContent = pageMeta[s].title;
     document.getElementById('pageSub').textContent = pageMeta[s].sub;
+    // Mobile
+    const mTitle = document.getElementById('mobilePageTitle');
+    if (mTitle) mTitle.textContent = pageMeta[s].title;
+    document.querySelectorAll('.bottom-nav-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.section === s);
+    });
     loadSection(s);
+    window.scrollTo(0, 0);
   }
 
   function refreshCurrent() { loadSection(currentSection); }
@@ -345,6 +499,7 @@
     else if (s==='earnings') loadEarnings();
     else if (s==='history') loadHistory();
     else if (s==='messages') loadChats();
+    else if (s==='profile') loadProfile();
   }
 
   function showToast(msg, type='success') {
@@ -487,14 +642,32 @@
     } catch(e) { document.getElementById('jobsGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>'; }
   }
 
+  function toggleDropdown(id) {
+    const dd = document.getElementById(id);
+    document.querySelectorAll('[id$="DD"]').forEach(d => { if(d.id!==id) d.style.display='none'; });
+    dd.style.display = dd.style.display==='none' ? 'block' : 'none';
+  }
+  document.addEventListener('click', e => {
+    if (!e.target.closest('[id$="DD"]') && !e.target.closest('button[onclick*="DD"]')) {
+      document.querySelectorAll('[id$="DD"]').forEach(d => d.style.display='none');
+    }
+  });
+  function updateAreaLabel() {
+    const checked = [...document.querySelectorAll('#areaDD input:checked')].map(c=>c.value);
+    document.getElementById('areaBtnLabel').textContent = checked.length ? `📍 ${checked.length} אזורים` : '📍 כל האזורים';
+  }
+  function updateTypeLabel() {
+    const checked = [...document.querySelectorAll('#typeDD input:checked')].map(c=>c.value);
+    document.getElementById('typeBtnLabel').textContent = checked.length ? `📋 ${checked.length} סוגים` : '📋 כל הסוגים';
+  }
   function filterJobs() {
     const q = document.getElementById('jobSearch').value.toLowerCase();
-    const areas = [...document.querySelectorAll('.filter-chip input[type=checkbox]:checked')].map(c=>c.value).filter(v=>['תל אביב והמרכז','ירושלים','חיפה והצפון','באר שבע והדרום','השרון','שפלה'].includes(v));
-    const types = [...document.querySelectorAll('.filter-chip input[type=checkbox]:checked')].map(c=>c.value).filter(v=>['זמנית','קבועה','משמרות','סופי שבוע'].includes(v));
+    const areas = [...document.querySelectorAll('#areaDD input:checked')].map(c=>c.value);
+    const types = [...document.querySelectorAll('#typeDD input:checked')].map(c=>c.value);
     const filtered = allJobs.filter(j => {
       const matchQ = !q || j.title.toLowerCase().includes(q) || (j.profession||'').toLowerCase().includes(q);
-      const matchArea = !areas.length || areas.some(a => (j.area||'').includes(a));
-      const matchType = !types.length || types.some(t => (j.jobType||'').includes(t));
+      const matchArea = !areas.length || areas.includes(j.area);
+      const matchType = !types.length || types.includes(j.jobType);
       return matchQ && matchArea && matchType;
     });
     renderJobs(filtered);
@@ -608,6 +781,59 @@
     }
   }
 
+  // ── PROFILE ──
+  const AREAS = ['תל אביב והמרכז','ירושלים','חיפה והצפון','באר שבע והדרום','השרון','שפלה'];
+  const JOB_TYPES = ['משרה מלאה','משרה חלקית','זמנית','קבועה','סטודנטים','סופי שבוע'];
+
+  function renderCheckboxGroup(containerId, options, selected=[]) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = options.map(opt => `
+      <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:0.82rem;transition:all 0.15s" 
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='var(--border)'">
+        <input type="checkbox" value="${opt}" ${selected.includes(opt)?'checked':''} style="accent-color:var(--accent)" onchange="this.closest('label').style.borderColor=this.checked?'var(--accent)':'var(--border)'"> ${opt}
+      </label>
+    `).join('');
+  }
+
+  async function loadProfile() {
+    try {
+      const res = await fetch(`${API}/api/auth/me`, { headers: headers() });
+      const u = res.ok ? await res.json() : user;
+      document.getElementById('pFirstName').value = u.firstName || '';
+      document.getElementById('pLastName').value = u.lastName || '';
+      document.getElementById('pPhone').value = u.phone || '';
+      document.getElementById('pProfession').value = u.profession || '';
+      document.getElementById('pBio').value = u.bio || '';
+      renderCheckboxGroup('pAreaCheckboxes', AREAS, u.preferredAreas || []);
+      renderCheckboxGroup('pTypeCheckboxes', JOB_TYPES, u.preferredJobTypes || []);
+    } catch(e) { showToast('שגיאה בטעינה', 'error'); }
+  }
+
+  document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const areas = [...document.querySelectorAll('#pAreaCheckboxes input:checked')].map(c=>c.value);
+    const types = [...document.querySelectorAll('#pTypeCheckboxes input:checked')].map(c=>c.value);
+    const body = {
+      firstName: document.getElementById('pFirstName').value,
+      lastName: document.getElementById('pLastName').value,
+      phone: document.getElementById('pPhone').value,
+      profession: document.getElementById('pProfession').value,
+      bio: document.getElementById('pBio').value,
+      preferredAreas: areas,
+      preferredJobTypes: types,
+    };
+    const pwd = document.getElementById('pPassword').value;
+    if (pwd) body.password = pwd;
+    try {
+      const res = await fetch(`${API}/api/auth/profile`, { method:'PATCH', headers:headers(), body:JSON.stringify(body) });
+      if (!res.ok) throw new Error();
+      const updated = await res.json();
+      localStorage.setItem('user', JSON.stringify({...user, ...updated}));
+      showToast('הפרטים עודכנו בהצלחה ✓');
+    } catch(e) { showToast('שגיאה בשמירה', 'error'); }
+  });
+
   // ── CHATS ──
   async function loadChats() {
     document.getElementById('chatsList').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -640,6 +866,39 @@
     } catch(e) {
       document.getElementById('chatsList').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>';
     }
+  }
+
+
+  async function downloadExcel() {
+    try {
+      showToast('מכין קובץ...');
+      const res = await fetch(`${API}/api/sessions/my`, { headers: headers() });
+      const data = res.ok ? await res.json() : { sessions: [] };
+      const sessions = data.sessions || [];
+
+      const rows = [['מעסיק','תאריך','שעת התחלה','שעת סיום','שעות','שכר נטו','סטטוס']];
+      sessions.forEach(s => {
+        rows.push([
+          s.employer?.businessName || '—',
+          fmtDate(s.date),
+          s.startTime ? fmtTime(new Date(s.startTime)) : '',
+          s.endTime ? fmtTime(new Date(s.endTime)) : '',
+          s.totalHours,
+          s.netWorkerPay,
+          s.status === 'approved' ? 'מאושר' : s.status === 'pending_approval' ? 'ממתין לאישור' : s.status
+        ]);
+      });
+
+      const csv = '\uFEFF' + rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `דוח_שעות_${(user.name||'עובד').replace(' ','_')}_${new Date().toLocaleDateString('he-IL').replace(/\//g,'-')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('הקובץ הורד ✓');
+    } catch(e) { showToast('שגיאה', 'error'); }
   }
 
   function logout() { localStorage.clear(); window.location='/pages/login.html'; }
@@ -836,10 +1095,15 @@
     c.scrollTop = c.scrollHeight;
   }
 
+  const PHONE_PATTERN = /(?:\d[\s\-.]?){9,}|מה.*?(?:טלפון|מספר|נייד)|(?:טלפון|מספר|נייד).*?שלך|צור.*?קשר.*?(?:ישיר|מחוץ)/i;
+
   async function sendMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text || !currentChatId) return;
+    if (PHONE_PATTERN.test(text)) {
+      if (!confirm('⚠️ נראה שאתה מנסה לשתף מספר טלפון או ליצור קשר מחוץ לאפליקציה.\n\nכל העסקאות חייבות להתבצע דרך WorkHour בלבד.\n\nלחץ אישור רק אם ההודעה לא קשורה לזה.')) return;
+    }
     input.value = '';
     input.style.height = 'auto';
 
@@ -880,120 +1144,35 @@
   });
 </script>
 
-
-<!-- EDIT PROFILE MODAL -->
-<div id="editProfileModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:none;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
-    <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:6px">✏️ ערוך את הפרופיל שלי</h3>
-    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:24px">הפרטים שלך גלויים למעסיקים</p>
-    <div style="margin-bottom:14px">
-      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">שם פרטי</label>
-      <input id="wp_firstName" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+<nav class="bottom-nav">
+  <div class="bottom-nav-items" id="bottomNavItems">
+    <div class="bottom-nav-item active" onclick="navigate('overview')" data-section="overview">
+      <div class="bnav-icon">📊</div>
+      <div class="bnav-label">ראשי</div>
     </div>
-    <div style="margin-bottom:14px">
-      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">שם משפחה</label>
-      <input id="wp_lastName" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+    <div class="bottom-nav-item" onclick="navigate('clock')" data-section="clock">
+      <div class="bnav-icon">⏱️</div>
+      <div class="bnav-label">שעון</div>
     </div>
-    <div style="margin-bottom:14px">
-      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">טלפון</label>
-      <input id="wp_phone" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+    <div class="bottom-nav-item" onclick="navigate('jobs')" data-section="jobs">
+      <div class="bnav-icon">🔍</div>
+      <div class="bnav-label">משרות</div>
     </div>
-    <div style="margin-bottom:14px">
-      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">מקצוע</label>
-      <input id="wp_profession" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+    <div class="bottom-nav-item" onclick="navigate('earnings')" data-section="earnings">
+      <div class="bnav-icon">💰</div>
+      <div class="bnav-label">רווחים</div>
     </div>
-    <div style="margin-bottom:14px">
-      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">תיאור קצר</label>
-      <textarea id="wp_description" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.88rem;outline:none;resize:vertical;min-height:70px"></textarea>
+    <div class="bottom-nav-item" onclick="navigate('messages')" data-section="messages">
+      <div class="bnav-icon">💬</div>
+      <div class="bnav-label">הודעות</div>
+      <div class="bnav-badge" id="bnMsgBadge" style="display:none">0</div>
     </div>
-    <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button onclick="document.getElementById('editProfileModal').style.display='none'" style="padding:10px 22px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">ביטול</button>
-      <button onclick="saveProfile()" style="padding:10px 22px;border-radius:10px;background:var(--accent);border:none;color:#000;font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">שמור</button>
+    <div class="bottom-nav-item" onclick="navigate('profile')" data-section="profile">
+      <div class="bnav-icon">👤</div>
+      <div class="bnav-label">פרופיל</div>
     </div>
   </div>
-</div>
-
-<!-- PHONE WARNING MODAL -->
-<div id="phoneWarningModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:600;display:none;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#1a1a2e;border:2px solid #e94560;border-radius:20px;padding:36px;width:100%;max-width:420px;text-align:center">
-    <div style="font-size:3rem;margin-bottom:16px">⚠️</div>
-    <h3 style="font-size:1.2rem;font-weight:800;margin-bottom:10px;color:#e94560">שים לב!</h3>
-    <p style="color:rgba(255,255,255,0.7);font-size:0.92rem;line-height:1.6;margin-bottom:24px">
-      זיהינו ניסיון לשיתוף מידע ליצירת קשר מחוץ לאפליקציה.<br><br>
-      <strong style="color:#fff">כל העסקאות חייבות להתבצע דרך WorkHour בלבד.</strong><br>
-      עסקאות מחוץ לאפליקציה עלולות להוביל לחסימת החשבון.
-    </p>
-    <div style="display:flex;gap:10px;justify-content:center">
-      <button id="phoneWarnCancel" style="padding:10px 22px;border-radius:10px;background:rgba(255,255,255,0.1);border:none;color:#fff;font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">ביטול</button>
-      <button id="phoneWarnSend" style="padding:10px 22px;border-radius:10px;background:#e94560;border:none;color:#fff;font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">שלח בכל זאת</button>
-    </div>
-  </div>
-</div>
-
-<script>
-  function openEditProfile() {
-    const u = JSON.parse(localStorage.getItem('user') || '{}');
-    document.getElementById('wp_firstName').value = u.firstName || '';
-    document.getElementById('wp_lastName').value = u.lastName || '';
-    document.getElementById('wp_phone').value = u.phone || '';
-    document.getElementById('wp_profession').value = u.profession || '';
-    document.getElementById('wp_description').value = u.description || '';
-    document.getElementById('editProfileModal').style.display = 'flex';
-  }
-
-  async function saveProfile() {
-    try {
-      const res = await fetch('/api/auth/update-profile', {
-        method: 'PATCH',
-        headers: headers(),
-        body: JSON.stringify({
-          firstName: document.getElementById('wp_firstName').value,
-          lastName: document.getElementById('wp_lastName').value,
-          phone: document.getElementById('wp_phone').value,
-          profession: document.getElementById('wp_profession').value,
-          description: document.getElementById('wp_description').value,
-        })
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      localStorage.setItem('user', JSON.stringify(data.user));
-      document.getElementById('wName').textContent = data.user.firstName + ' ' + data.user.lastName;
-      document.getElementById('wInitial').textContent = data.user.firstName?.[0] || 'ע';
-      document.getElementById('editProfileModal').style.display = 'none';
-      showToast('הפרטים עודכנו ✓');
-    } catch(e) { showToast('שגיאה בעדכון', 'error'); }
-  }
-
-  // אזהרת טלפון בצ'אט - עוקף את sendMessage המקורי
-  const _origSendMessage = window.sendMessage;
-  const PHONE_PATTERNS = [/05\d[\s-]?\d{7}/, /\d{10}/, /מה.{0,5}טלפון/, /מה.{0,5}מספר/, /תן.{0,5}נייד/, /תשלח.{0,5}מספר/];
-  
-  let pendingMessageText = null;
-
-  window.sendMessage = async function() {
-    const input = document.getElementById('chatInput');
-    const text = input.value.trim();
-    if (!text) return;
-    
-    const hasPhone = PHONE_PATTERNS.some(p => p.test(text));
-    if (hasPhone) {
-      pendingMessageText = text;
-      document.getElementById('phoneWarningModal').style.display = 'flex';
-      document.getElementById('phoneWarnCancel').onclick = () => {
-        document.getElementById('phoneWarningModal').style.display = 'none';
-        pendingMessageText = null;
-      };
-      document.getElementById('phoneWarnSend').onclick = async () => {
-        document.getElementById('phoneWarningModal').style.display = 'none';
-        if (_origSendMessage) await _origSendMessage();
-        else await _sendMessageDirect(text);
-        pendingMessageText = null;
-      };
-      return;
-    }
-    if (_origSendMessage) await _origSendMessage();
-  };
-</script>
+</nav>
 
 </body>
 </html>
