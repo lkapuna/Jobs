@@ -18,19 +18,18 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('✅ MongoDB מחובר');
     try {
-      const bcrypt = require('bcryptjs');
       const User = require('./models/User');
       const existing = await User.findOne({ role: 'admin' });
       if (!existing) {
-        const password = await bcrypt.hash('Admin1234!', 10);
+        // משתמשים ב-User.create כדי שה-pre-save יצפין את הסיסמה פעם אחת בלבד
         await User.create({
           role: 'admin',
           email: 'lkapuna@gmail.com',
-          password,
-          phone: '0500000000',
+          password: 'L220984k', // גולמית — ה-model יצפין אוטומטית
+          phone: '0524332333',
           isActive: true
         });
-        console.log('✅ אדמין נוצר: lkapuna@gmail.com / Admin1234!');
+        console.log('✅ אדמין נוצר: lkapuna@gmail.com / L220984k');
       } else {
         console.log('✅ אדמין קיים במערכת');
       }
