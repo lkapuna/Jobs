@@ -94,4 +94,23 @@ router.patch('/:jobId/applicants/:workerId', auth, requireRole('employer'), asyn
   }
 });
 
+
+// GET /api/jobs/my-approved - משרות שהעובד אושר בהן
+router.get('/my-approved', auth, requireRole('worker'), async (req, res) => {
+  try {
+    const jobs = await Job.find({
+      'applicants': {
+        $elemMatch: {
+          worker: req.user._id,
+          status: 'interested'
+        }
+      },
+      isActive: true
+    }).populate('employer', 'businessName');
+    res.json(jobs);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאה' });
+  }
+});
+
 module.exports = router;
