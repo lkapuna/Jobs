@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="apple-mobile-web-app-title" content="שעתי">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>שעתי — עובד</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    :root {
+      --bg:#0f1923; --surface:#162030; --surface2:#1e2d40; --border:rgba(255,255,255,0.07);
+      --accent:#E05A2B; --accent2:#FF8C5A; --red:#e05555; --text:#e8f0fe; --muted:rgba(232,240,254,0.45);
+      --nav-h:64px; --top-h:56px; --safe-bottom:env(safe-area-inset-bottom,0px);
+    }
+    html, body { height:100%; overflow:hidden; }
+    body { font-family:'Heebo',sans-serif; background:var(--bg); color:var(--text); display:flex; flex-direction:column; }
+
+    /* TOP */
+    .topbar { height:var(--top-h); background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 16px; gap:12px; flex-shrink:0; }
+    .logo { font-size:1.2rem; font-weight:900; color:#fff; }
+    .logo span { color:var(--accent); }
+    .page-title { font-size:1rem; font-weight:800; flex:1; text-align:center; }
+    .avatar-btn { width:34px; height:34px; border-radius:50%; background:var(--accent); border:none; color:#fff; font-weight:900; font-size:0.85rem; cursor:pointer; flex-shrink:0; }
+
+    /* SCROLL */
+    .scroll-area { flex:1; overflow-y:auto; overflow-x:hidden; padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 16px); -webkit-overflow-scrolling:touch; }
+    .page { display:none; padding:14px; }
+    .page.active { display:block; }
+
+    /* BOTTOM NAV */
+    .bottom-nav { position:fixed; bottom:0; left:0; right:0; z-index:100; background:var(--surface); border-top:1px solid var(--border); padding-bottom:var(--safe-bottom); }
+    .bnav-row { display:flex; }
+    .bnav-item { flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 2px 8px; cursor:pointer; color:var(--muted); font-size:0.58rem; font-weight:700; gap:3px; border:none; background:none; position:relative; transition:color 0.2s; }
+    .bnav-item.active { color:var(--accent); }
+    .bnav-icon { font-size:1.35rem; line-height:1; }
+    .bnav-badge { position:absolute; top:6px; left:50%; transform:translateX(-50%) translateX(10px); background:var(--accent); color:#fff; font-size:0.55rem; font-weight:900; min-width:16px; height:16px; border-radius:8px; padding:0 3px; display:flex; align-items:center; justify-content:center; }
+
+    /* CARDS */
+    .stats-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+    .stat-card { background:var(--surface); border-radius:14px; padding:16px; border:1px solid var(--border); }
+    .stat-icon { font-size:1.4rem; margin-bottom:8px; }
+    .stat-val { font-size:1.8rem; font-weight:900; line-height:1; }
+    .stat-val.green { color:var(--accent); }
+    .stat-val.blue { color:var(--accent2); }
+    .stat-label { font-size:0.74rem; color:var(--muted); margin-top:4px; }
+
+    .card { background:var(--surface); border-radius:14px; border:1px solid var(--border); margin-bottom:12px; overflow:hidden; }
+    .card-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .card-title { font-size:0.95rem; font-weight:700; }
+
+    /* CLOCK */
+    .clock-display { text-align:center; padding:28px 20px; }
+    .clock-time { font-size:3rem; font-weight:900; color:var(--accent); font-variant-numeric:tabular-nums; letter-spacing:-1px; }
+    .clock-date { font-size:0.85rem; color:var(--muted); margin-top:4px; }
+    .clock-status { display:inline-flex; align-items:center; gap:6px; margin-top:12px; padding:6px 14px; border-radius:20px; font-size:0.8rem; font-weight:700; }
+    .clock-status.idle { background:rgba(255,255,255,0.06); color:var(--muted); }
+    .clock-status.active { background:rgba(224,90,43,0.12); color:var(--accent); }
+    .dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
+    .dot.pulse { animation:pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+    .clock-actions { display:flex; gap:10px; margin-top:20px; }
+
+    /* JOB CARDS */
+    .job-card { background:var(--surface); border-radius:14px; border:1px solid var(--border); padding:16px; margin-bottom:10px; }
+    .job-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+    .job-title { font-size:0.95rem; font-weight:700; }
+    .job-rate { font-size:1.3rem; font-weight:900; color:var(--accent); margin-bottom:8px; }
+    .job-tags { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; }
+    .job-tag { font-size:0.72rem; color:var(--muted); background:var(--surface2); padding:3px 8px; border-radius:20px; }
+    .new-badge { font-size:0.65rem; font-weight:700; padding:2px 7px; border-radius:20px; background:rgba(224,90,43,0.12); color:var(--accent); }
+
+    /* SEARCH */
+    .search-box { position:relative; margin-bottom:10px; }
+    .search-box input { padding-right:38px; }
+    .search-icon { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.9rem; pointer-events:none; }
+    .filter-row { display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
+    .filter-row::-webkit-scrollbar { display:none; }
+    .filter-chip { padding:7px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--muted); font-family:'Heebo',sans-serif; font-size:0.78rem; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0; transition:all 0.2s; }
+    .filter-chip.active { border-color:var(--accent); color:var(--accent); background:rgba(224,90,43,0.08); }
+
+    /* SESSION ROWS */
+    .sess-row { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+    .sess-row:last-child { border-bottom:none; }
+    .sess-emp { width:38px; height:38px; border-radius:10px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+    .sess-info { flex:1; min-width:0; }
+    .sess-name { font-weight:700; font-size:0.88rem; }
+    .sess-time { font-size:0.74rem; color:var(--muted); margin-top:2px; }
+    .sess-earn { text-align:left; }
+    .sess-hours { font-size:1rem; font-weight:800; color:var(--accent); }
+    .sess-pay { font-size:0.78rem; color:var(--muted); }
+
+    /* EARNINGS */
+    .earn-big { text-align:center; padding:24px; }
+    .earn-amount { font-size:2.8rem; font-weight:900; color:var(--accent); }
+    .earn-label { font-size:0.82rem; color:var(--muted); margin-top:4px; }
+
+    /* MESSAGES */
+    .chat-row { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; cursor:pointer; transition:background 0.15s; }
+    .chat-row:last-child { border-bottom:none; }
+    .chat-row:active { background:var(--surface2); }
+    .chat-av { width:42px; height:42px; border-radius:50%; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--accent); font-size:1rem; flex-shrink:0; }
+    .chat-info { flex:1; min-width:0; }
+    .chat-name { font-weight:700; font-size:0.9rem; }
+    .chat-preview { font-size:0.76rem; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .chat-time { font-size:0.7rem; color:var(--muted); flex-shrink:0; }
+    .unread-dot { width:10px; height:10px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+
+    /* BUTTONS */
+    .btn { padding:9px 18px; border-radius:10px; border:none; font-family:'Heebo',sans-serif; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.2s; }
+    .btn-primary { background:var(--accent); color:#000; width:100%; padding:15px; font-size:1rem; border-radius:14px; font-size:0.95rem; }
+    .btn-secondary { background:var(--surface2); color:var(--text); width:100%; padding:15px; font-size:0.95rem; border-radius:14px; border:1px solid var(--border); }
+    .btn-sm { padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-family:'Heebo',sans-serif; font-size:0.75rem; font-weight:700; cursor:pointer; }
+    .btn-apply { width:100%; padding:12px; border-radius:10px; background:rgba(224,90,43,0.1); border:1px solid rgba(224,90,43,0.25); color:var(--accent); font-family:'Heebo',sans-serif; font-size:0.88rem; font-weight:700; cursor:pointer; margin-top:10px; }
+    .btn-apply:disabled { opacity:0.4; cursor:default; }
+
+    /* FORMS */
+    .form-group { margin-bottom:14px; }
+    .form-label { display:block; font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em; }
+    input, select, textarea { width:100%; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Heebo',sans-serif; font-size:0.92rem; outline:none; transition:border-color 0.2s; -webkit-appearance:none; }
+    input:focus, select:focus, textarea:focus { border-color:var(--accent); }
+    input::placeholder, textarea::placeholder { color:var(--muted); }
+    textarea { resize:vertical; min-height:80px; }
+    select option { background:var(--surface2); }
+
+    /* CHECKBOX GROUP */
+    .cb-group { display:flex; flex-wrap:wrap; gap:7px; padding:10px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; }
+    .cb-label { display:flex; align-items:center; gap:5px; padding:5px 10px; background:var(--surface); border:1px solid var(--border); border-radius:20px; cursor:pointer; font-size:0.78rem; transition:border-color 0.15s; }
+    .cb-label input { width:auto; padding:0; background:none; border:none; accent-color:var(--accent); }
+
+    /* APPLY MODAL */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; display:none; align-items:flex-end; }
+    .modal-overlay.open { display:flex; }
+    .modal-sheet { background:var(--surface); border-radius:20px 20px 0 0; width:100%; max-height:85vh; overflow-y:auto; padding:24px 16px; padding-bottom:calc(24px + var(--safe-bottom)); }
+    .modal-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 20px; }
+    .modal-title { font-size:1.15rem; font-weight:800; margin-bottom:16px; }
+
+    /* BADGES */
+    .badge { display:inline-flex; align-items:center; padding:3px 9px; border-radius:20px; font-size:0.72rem; font-weight:700; }
+    .badge-pending { background:rgba(255,255,255,0.07); color:var(--muted); }
+    .badge-interested { background:rgba(224,90,43,0.12); color:var(--accent); }
+    .badge-approved { background:rgba(224,90,43,0.12); color:var(--accent); }
+    .badge-rejected { background:rgba(224,85,85,0.12); color:var(--red); }
+    .badge-disputed { background:rgba(224,85,85,0.12); color:var(--red); }
+
+    /* EMPTY / LOADING */
+    .empty { text-align:center; padding:48px 20px; color:var(--muted); }
+    .empty-icon { font-size:2.8rem; margin-bottom:10px; }
+    .loading { text-align:center; padding:40px; color:var(--muted); }
+    .spinner { width:26px; height:26px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 10px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* TOAST */
+    .toast { position:fixed; bottom:calc(var(--nav-h) + var(--safe-bottom) + 12px); left:50%; transform:translateX(-50%) translateY(10px); background:var(--surface); border:1px solid var(--border); color:var(--text); padding:11px 22px; border-radius:12px; font-size:0.88rem; font-weight:600; opacity:0; transition:all 0.3s; z-index:999; pointer-events:none; white-space:nowrap; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .toast.ok { background:var(--accent); color:#000; border-color:transparent; }
+    .toast.err { background:var(--red); color:#fff; border-color:transparent; }
+
+    /* CHAT OVERLAY */
+    .chat-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:300; display:none; align-items:flex-end; }
+    .chat-overlay.open { display:flex; }
+    .chat-box { width:100%; height:92vh; background:#111827; border-radius:20px 20px 0 0; display:flex; flex-direction:column; overflow:hidden; }
+    .chat-hdr { padding:14px 16px; background:#0d1520; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:10px; }
+    .chat-hdr-av { width:36px; height:36px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:900; color:#000; font-size:0.9rem; flex-shrink:0; }
+    .chat-hdr-name { font-weight:700; font-size:0.9rem; color:#f0ede8; }
+    .chat-hdr-sub { font-size:0.72rem; color:rgba(240,237,232,0.4); }
+    .chat-close { margin-right:auto; background:none; border:none; color:rgba(240,237,232,0.4); font-size:1.3rem; cursor:pointer; padding:4px; }
+    .chat-msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; -webkit-overflow-scrolling:touch; }
+    .msg { max-width:78%; display:flex; flex-direction:column; }
+    .msg.mine { align-self:flex-start; }
+    .msg.theirs { align-self:flex-end; }
+    .msg-bubble { padding:9px 13px; border-radius:14px; font-size:0.86rem; line-height:1.4; word-break:break-word; }
+    .msg.mine .msg-bubble { background:var(--accent); color:#000; border-bottom-right-radius:3px; }
+    .msg.theirs .msg-bubble { background:#1e3a5f; color:#f0ede8; border-bottom-left-radius:3px; }
+    .msg-t { font-size:0.65rem; color:rgba(255,255,255,0.3); margin-top:3px; padding:0 3px; }
+    .chat-input-row { padding:10px 12px; background:#0d1520; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:8px; align-items:flex-end; padding-bottom:calc(10px + var(--safe-bottom)); }
+    .chat-input { flex:1; background:#1c2b3a; border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:10px 12px; color:#f0ede8; font-family:'Heebo',sans-serif; font-size:0.9rem; outline:none; resize:none; max-height:100px; }
+    .chat-input::placeholder { color:rgba(240,237,232,0.35); }
+    .chat-send { width:38px; height:38px; border-radius:10px; background:var(--accent); border:none; color:#000; font-size:1rem; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+    .chat-empty { text-align:center; color:rgba(255,255,255,0.3); font-size:0.84rem; margin:auto; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">שע<span>תי</span></div>
+  <div class="page-title" id="pageTitle">סקירה כללית</div>
+  <button class="avatar-btn" id="avatarBtn" onclick="navigate('profile')">ע</button>
+</div>
+
+<div class="scroll-area" id="scrollArea">
+
+  <!-- OVERVIEW -->
+  <div class="page active" id="page-overview">
+    <div class="stats-row" id="statsGrid"><div class="loading"><div class="spinner"></div></div></div>
+    <div class="card" id="activeShiftCard" style="display:none">
+      <div class="card-header"><span class="card-title">⏱️ משמרת פעילה</span></div>
+      <div class="clock-display">
+        <div class="clock-time" id="miniClock">00:00:00</div>
+        <div class="clock-date" id="miniClockSub"></div>
+        <div class="clock-actions">
+          <button class="btn-secondary" onclick="navigate('clock')" style="flex:1;padding:12px">פרטים</button>
+          <button class="btn-primary" onclick="endShift()" style="flex:1;padding:12px">סיים משמרת</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">📋 היסטוריה אחרונה</span></div>
+      <div id="recentSessions"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- CLOCK -->
+  <div class="page" id="page-clock">
+    <div class="card">
+      <div class="clock-display">
+        <div class="clock-time" id="clockTime">00:00:00</div>
+        <div class="clock-date" id="clockDate"></div>
+        <div class="clock-status idle" id="clockStatus"><div class="dot"></div><span id="clockStatusTxt">לא פעיל</span></div>
+      </div>
+      <div style="padding:0 16px 20px">
+        <div class="form-group" id="jobSelectGroup">
+          <label class="form-label">בחר משרה</label>
+          <select id="jobSelect"><option value="">טוען...</option></select>
+        </div>
+        <button class="btn-primary" id="clockBtn" onclick="toggleShift()">▶ התחל משמרת</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JOBS -->
+  <div class="page" id="page-jobs">
+    <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="jobSearch" placeholder="חיפוש משרות..." oninput="filterJobs()"></div>
+    <div class="filter-row" id="areaFilters">
+      <button class="filter-chip active" onclick="setFilter('area','',this)">כל האזורים</button>
+      <button class="filter-chip" onclick="setFilter('area','תל אביב והמרכז',this)">ת״א</button>
+      <button class="filter-chip" onclick="setFilter('area','ירושלים',this)">ירושלים</button>
+      <button class="filter-chip" onclick="setFilter('area','חיפה והצפון',this)">חיפה</button>
+      <button class="filter-chip" onclick="setFilter('area','באר שבע והדרום',this)">ב״ש</button>
+      <button class="filter-chip" onclick="setFilter('area','השרון',this)">השרון</button>
+    </div>
+    <div class="filter-row" id="typeFilters">
+      <button class="filter-chip active" onclick="setFilter('type','',this)">כל הסוגים</button>
+      <button class="filter-chip" onclick="setFilter('type','משרה מלאה',this)">מלאה</button>
+      <button class="filter-chip" onclick="setFilter('type','משרה חלקית',this)">חלקית</button>
+      <button class="filter-chip" onclick="setFilter('type','זמנית',this)">זמנית</button>
+      <button class="filter-chip" onclick="setFilter('type','סטודנטים',this)">סטודנטים</button>
+      <button class="filter-chip" onclick="setFilter('type','סופי שבוע',this)">סופ״ש</button>
+    </div>
+    <div id="jobsList"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- EARNINGS -->
+  <div class="page" id="page-earnings">
+    <div class="earn-big">
+      <div class="earn-amount" id="totalEarn">₪0</div>
+      <div class="earn-label">סה״כ רווחים</div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-val blue" id="totalHours">0</div><div class="stat-label">שעות עבודה</div></div>
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-val" id="totalShifts">0</div><div class="stat-label">משמרות</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">היסטוריית משמרות</span>
+        <button class="btn-sm" onclick="downloadExcel()">📥 Excel</button>
+      </div>
+      <div id="earnHistory"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- MESSAGES -->
+  <div class="page" id="page-messages">
+    <div class="card">
+      <div id="chatList"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="page" id="page-profile">
+    <div class="card">
+      <div class="card-header"><span class="card-title">✏️ עריכת הפרטים שלי</span></div>
+      <div style="padding:16px">
+        <form id="profileForm">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group"><label class="form-label">שם פרטי</label><input id="pFirst" type="text"></div>
+            <div class="form-group"><label class="form-label">שם משפחה</label><input id="pLast" type="text"></div>
+          </div>
+          <div class="form-group"><label class="form-label">טלפון</label><input id="pPhone" type="tel"></div>
+          <div class="form-group"><label class="form-label">מקצוע / תחום</label><input id="pProf" type="text" placeholder="מכירות, שירות לקוחות..."></div>
+          <div class="form-group">
+            <label class="form-label">אזורים מועדפים</label>
+            <div class="cb-group" id="pAreas"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">סוגי משרות מועדפים</label>
+            <div class="cb-group" id="pTypes"></div>
+          </div>
+          <div class="form-group"><label class="form-label">על עצמי</label><textarea id="pBio" placeholder="ספר על הניסיון שלך..."></textarea></div>
+          <div class="form-group"><label class="form-label">סיסמה חדשה (אופציונלי)</label><input id="pPwd" type="password" placeholder="השאר ריק לא לשנות"></div>
+          <button type="submit" class="btn-primary">שמור שינויים</button>
+        </form>
+      </div>
+    </div>
+    <div style="margin-top:12px;padding:0">
+      <button onclick="logout()" style="width:100%;padding:14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Heebo',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer">התנתק</button>
+    </div>
+  </div>
+
+</div><!-- /scroll-area -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="bnav-row">
+    <button class="bnav-item active" onclick="navigate('overview')" data-s="overview"><div class="bnav-icon">📊</div><div>ראשי</div></button>
+    <button class="bnav-item" onclick="navigate('clock')" data-s="clock"><div class="bnav-icon">⏱️</div><div>שעון</div></button>
+    <button class="bnav-item" onclick="navigate('jobs')" data-s="jobs"><div class="bnav-icon">🔍</div><div>משרות</div></button>
+    <button class="bnav-item" onclick="navigate('earnings')" data-s="earnings"><div class="bnav-icon">💰</div><div>רווחים</div></button>
+    <button class="bnav-item" onclick="navigate('messages')" data-s="messages"><div class="bnav-icon">💬</div><div>הודעות</div><div class="bnav-badge" id="msgBadge" style="display:none">0</div></button>
+    <button class="bnav-item" onclick="navigate('profile')" data-s="profile"><div class="bnav-icon">👤</div><div>פרופיל</div></button>
+  </div>
+</nav>
+
+<!-- APPLY MODAL -->
+<div class="modal-overlay" id="applyModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="applyJobTitle">פנייה למשרה</div>
+    <div class="form-group"><label class="form-label">הודעה למעסיק (אופציונלי)</label><textarea id="applyMsg" placeholder="ספר קצת על עצמך..."></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button onclick="closeApply()" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">ביטול</button>
+      <button onclick="submitApply()" class="btn-primary" style="flex:2">שלח פנייה</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div class="chat-overlay" id="chatOverlay">
+  <div class="chat-box">
+    <div class="chat-hdr">
+      <div class="chat-hdr-av" id="chatAv">?</div>
+      <div><div class="chat-hdr-name" id="chatName">שיחה</div><div class="chat-hdr-sub" id="chatSub"></div></div>
+      <button class="chat-close" onclick="closeChat()">✕</button>
+    </div>
+    <div class="chat-msgs" id="chatMsgs"><div class="chat-empty">טוען...</div></div>
+    <div class="chat-input-row">
+      <textarea class="chat-input" id="chatInput" placeholder="כתוב הודעה..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+      <button class="chat-send" onclick="sendMsg()">➤</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';
+const token = localStorage.getItem('token');
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token || user.role !== 'worker') window.location = '/pages/login.html';
+
+const H = () => ({ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` });
+const fmt = n => new Intl.NumberFormat('he-IL').format(Math.round(n||0));
+const fmtD = d => new Date(d).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit'});
+const fmtT = d => new Date(d).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+
+document.getElementById('avatarBtn').textContent = (user.name||'ע')[0];
+
+let curSection = 'overview', allJobs = [], activeFilters = {area:'', type:''};
+let shiftActive = false, shiftStart = null, shiftTimer = null, curSessionId = null, curApplyJobId = null;
+let curChat = null, chatSock = null;
+
+const titles = { overview:'סקירה כללית', clock:'שעון נוכחות', jobs:'חיפוש משרות', earnings:'רווחים', messages:'הודעות', profile:'הפרטים שלי' };
+const AREAS = ['תל אביב והמרכז','ירושלים','חיפה והצפון','באר שבע והדרום','השרון','שפלה'];
+const TYPES = ['משרה מלאה','משרה חלקית','זמנית','קבועה','סטודנטים','סופי שבוע'];
+
+function navigate(s) {
+  curSection = s;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${s}`).classList.add('active');
+  document.querySelectorAll('.bnav-item').forEach(b => b.classList.toggle('active', b.dataset.s === s));
+  document.getElementById('pageTitle').textContent = titles[s];
+  document.getElementById('scrollArea').scrollTop = 0;
+  if (s==='overview') loadOverview();
+  else if (s==='clock') loadClock();
+  else if (s==='jobs') loadJobs();
+  else if (s==='earnings') loadEarnings();
+  else if (s==='messages') loadChats();
+  else if (s==='profile') loadProfile();
+}
+
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ── CLOCK ──
+function tickClock() {
+  const now = new Date();
+  document.getElementById('clockTime').textContent = now.toLocaleTimeString('he-IL');
+  document.getElementById('clockDate').textContent = now.toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'});
+  if (shiftActive && shiftStart) {
+    const diff = Date.now() - shiftStart;
+    const h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
+    const str = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    const el = document.getElementById('clockTime');
+    if(el) el.textContent = str;
+    const mini = document.getElementById('miniClock');
+    if(mini) mini.textContent = str;
+  }
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+async function loadClock() {
+  try {
+    const r = await fetch(`${API}/api/jobs/my-approved`, {headers:H()});
+    const jobs = r.ok ? await r.json() : [];
+    const sel = document.getElementById('jobSelect');
+    sel.innerHTML = jobs.length ? '<option value="">בחר משרה...</option>' + jobs.map(j=>`<option value="${j._id}|${j.employerId||j.employer}">${j.title} — ${j.area}</option>`).join('') : '<option value="">אין משרות מאושרות</option>';
+  } catch(e) {}
+  updateClockUI();
+}
+
+function updateClockUI() {
+  const btn = document.getElementById('clockBtn');
+  const status = document.getElementById('clockStatus');
+  const statusTxt = document.getElementById('clockStatusTxt');
+  const dot = status.querySelector('.dot');
+  if (shiftActive) {
+    btn.textContent = '⏹ סיים משמרת'; btn.className = 'btn-secondary';
+    status.className = 'clock-status active'; statusTxt.textContent = 'משמרת פעילה';
+    dot.className = 'dot pulse';
+    document.getElementById('jobSelectGroup').style.opacity = '0.4';
+    document.getElementById('jobSelectGroup').style.pointerEvents = 'none';
+    document.getElementById('activeShiftCard').style.display = '';
+  } else {
+    btn.textContent = '▶ התחל משמרת'; btn.className = 'btn-primary';
+    status.className = 'clock-status idle'; statusTxt.textContent = 'לא פעיל';
+    dot.className = 'dot';
+    document.getElementById('jobSelectGroup').style.opacity = '1';
+    document.getElementById('jobSelectGroup').style.pointerEvents = 'auto';
+    document.getElementById('activeShiftCard').style.display = 'none';
+  }
+}
+
+async function toggleShift() {
+  if (shiftActive) { await endShift(); return; }
+  const val = document.getElementById('jobSelect').value;
+  if (!val) { toast('בחר משרה קודם','err'); return; }
+  const [jobId, employerId] = val.split('|');
+  try {
+    const r = await fetch(`${API}/api/sessions/start`,{method:'POST',headers:H(),body:JSON.stringify({jobId,employerId})});
+    if (!r.ok) throw new Error();
+    const s = await r.json();
+    curSessionId = s._id; shiftActive = true; shiftStart = Date.now();
+    const sub = document.getElementById('miniClockSub');
+    if(sub) sub.textContent = 'משמרת פעילה · ' + fmtT(new Date());
+    updateClockUI(); toast('משמרת התחילה ✓','ok');
+  } catch(e) { toast('שגיאה בהתחלת משמרת','err'); }
+}
+
+async function endShift() {
+  if (!curSessionId) return;
+  try {
+    const r = await fetch(`${API}/api/sessions/end`,{method:'POST',headers:H(),body:JSON.stringify({sessionId:curSessionId})});
+    if (!r.ok) throw new Error();
+    const s = await r.json();
+    shiftActive = false; shiftStart = null; curSessionId = null;
+    updateClockUI();
+    toast(`משמרת הסתיימה · ${s.totalHours}h · ₪${fmt(s.netWorkerPay)}`,'ok');
+    loadOverview();
+  } catch(e) { toast('שגיאה בסיום משמרת','err'); }
+}
+
+// ── OVERVIEW ──
+async function loadOverview() {
+  try {
+    const r = await fetch(`${API}/api/sessions/my`,{headers:H()});
+    const d = r.ok ? await r.json() : {};
+    const sessions = d.sessions || [];
+    const approved = sessions.filter(s=>s.status==='approved');
+    const totalEarn = approved.reduce((s,x)=>s+(x.netWorkerPay||0),0);
+    const totalHrs = approved.reduce((s,x)=>s+(x.totalHours||0),0);
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val green">₪${fmt(totalEarn)}</div><div class="stat-label">סה"כ רווחים</div></div>
+      <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-val blue">${totalHrs.toFixed(1)}</div><div class="stat-label">שעות עבודה</div></div>
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-val">${sessions.length}</div><div class="stat-label">משמרות</div></div>
+      <div class="stat-card"><div class="stat-icon">${shiftActive?'🟢':'⚪'}</div><div class="stat-val" style="font-size:1rem">${shiftActive?'פעיל':'לא פעיל'}</div><div class="stat-label">סטטוס</div></div>
+    `;
+    const recent = sessions.slice(0,5);
+    document.getElementById('recentSessions').innerHTML = recent.length ? recent.map(s=>`
+      <div class="sess-row">
+        <div class="sess-emp">🏢</div>
+        <div class="sess-info">
+          <div class="sess-name">${s.employer?.businessName||'—'}</div>
+          <div class="sess-time">${fmtD(s.date)} · <span class="badge badge-${s.status}">${s.status==='approved'?'מאושר':s.status==='pending_approval'?'ממתין':'—'}</span></div>
+        </div>
+        <div class="sess-earn">
+          <div class="sess-hours">${s.totalHours}h</div>
+          <div class="sess-pay">₪${fmt(s.netWorkerPay)}</div>
+        </div>
+      </div>`).join('') : '<div class="empty"><div class="empty-icon">📋</div><p>אין היסטוריה עדיין</p></div>';
+  } catch(e) {}
+}
+
+// ── JOBS ──
+let areaFilter='', typeFilter='';
+async function loadJobs() {
+  document.getElementById('jobsList').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch(`${API}/api/jobs`,{headers:H()});
+    allJobs = r.ok ? await r.json() : [];
+    filterJobs();
+  } catch(e) {}
+}
+
+function setFilter(kind, val, el) {
+  if (kind==='area') { areaFilter=val; document.querySelectorAll('#areaFilters .filter-chip').forEach(c=>c.classList.remove('active')); }
+  else { typeFilter=val; document.querySelectorAll('#typeFilters .filter-chip').forEach(c=>c.classList.remove('active')); }
+  el.classList.add('active');
+  filterJobs();
+}
+
+function filterJobs() {
+  const q = (document.getElementById('jobSearch').value||'').toLowerCase();
+  const filtered = allJobs.filter(j => {
+    const mq = !q || (j.title||'').toLowerCase().includes(q) || (j.profession||'').toLowerCase().includes(q);
+    const ma = !areaFilter || j.area===areaFilter;
+    const mt = !typeFilter || (j.jobType||'').includes(typeFilter);
+    return mq && ma && mt;
+  });
+  document.getElementById('jobsList').innerHTML = filtered.length ? filtered.map(j=>`
+    <div class="job-card">
+      <div class="job-top"><div class="job-title">${j.title}</div><span class="new-badge">${j.profession||''}</span></div>
+      <div class="job-rate">₪${j.hourlyRate} <span style="font-size:0.78rem;font-weight:400;color:var(--muted)">לשעה</span></div>
+      <div class="job-tags">
+        <span class="job-tag">📍 ${j.area}</span>
+        ${j.jobType?`<span class="job-tag">📋 ${j.jobType}</span>`:''}
+        ${j.hours?`<span class="job-tag">🕐 ${j.hours}</span>`:''}
+      </div>
+      ${j.description?`<div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;line-height:1.5">${j.description.substring(0,100)}${j.description.length>100?'...':''}</div>`:''}
+      <button class="btn-apply" onclick="openApply('${j._id}')" ${j.myStatus?'disabled':''}>
+        ${j.myStatus==='pending'?'✓ פנייה נשלחה':j.myStatus==='interested'?'✓ מעוניין':j.myStatus?'הסטטוס: '+j.myStatus:'📨 שלח פנייה'}
+      </button>
+    </div>`).join('') : '<div class="empty"><div class="empty-icon">🔍</div><p>לא נמצאו משרות</p></div>';
+}
+
+function openApply(jobId) { curApplyJobId=jobId; document.getElementById('applyModal').classList.add('open'); document.getElementById('applyMsg').value=''; }
+function closeApply() { document.getElementById('applyModal').classList.remove('open'); curApplyJobId=null; }
+async function submitApply() {
+  if (!curApplyJobId) return;
+  try {
+    const r = await fetch(`${API}/api/jobs/${curApplyJobId}/apply`,{method:'POST',headers:H(),body:JSON.stringify({message:document.getElementById('applyMsg').value})});
+    if (!r.ok) throw new Error();
+    closeApply(); toast('הפנייה נשלחה ✓','ok'); loadJobs();
+  } catch(e) { toast('שגיאה בשליחה','err'); }
+}
+
+// ── EARNINGS ──
+async function loadEarnings() {
+  try {
+    const r = await fetch(`${API}/api/sessions/my`,{headers:H()});
+    const d = r.ok ? await r.json() : {};
+    const sessions = d.sessions || [];
+    const approved = sessions.filter(s=>s.status==='approved');
+    const total = approved.reduce((s,x)=>s+(x.netWorkerPay||0),0);
+    const hours = approved.reduce((s,x)=>s+(x.totalHours||0),0);
+    document.getElementById('totalEarn').textContent = `₪${fmt(total)}`;
+    document.getElementById('totalHours').textContent = hours.toFixed(1);
+    document.getElementById('totalShifts').textContent = approved.length;
+    document.getElementById('earnHistory').innerHTML = approved.length ? approved.map(s=>`
+      <div class="sess-row">
+        <div class="sess-emp">🏢</div>
+        <div class="sess-info">
+          <div class="sess-name">${s.employer?.businessName||'—'}</div>
+          <div class="sess-time">${fmtD(s.date)} · ${fmtT(s.startTime)}—${fmtT(s.endTime)}</div>
+        </div>
+        <div class="sess-earn"><div class="sess-hours">${s.totalHours}h</div><div style="color:var(--accent);font-weight:700;font-size:0.85rem">₪${fmt(s.netWorkerPay)}</div></div>
+      </div>`).join('') : '<div class="empty"><div class="empty-icon">💰</div><p>אין רווחים עדיין</p></div>';
+  } catch(e) {}
+}
+
+async function downloadExcel() {
+  try {
+    const r = await fetch(`${API}/api/sessions/my`,{headers:H()});
+    const d = r.ok ? await r.json() : {};
+    const sessions = d.sessions||[];
+    const rows=[['מעסיק','תאריך','שעת התחלה','שעת סיום','שעות','שכר נטו','סטטוס']];
+    sessions.forEach(s=>rows.push([s.employer?.businessName||'—',fmtD(s.date),fmtT(s.startTime),fmtT(s.endTime),s.totalHours,s.netWorkerPay,s.status==='approved'?'מאושר':'ממתין']));
+    const csv='\uFEFF'+rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+    a.download=`דוח_${user.name||'עובד'}_${new Date().toLocaleDateString('he-IL').replace(/\//g,'-')}.csv`; a.click();
+    toast('הורד ✓','ok');
+  } catch(e) { toast('שגיאה','err'); }
+}
+
+// ── CHATS ──
+async function loadChats() {
+  document.getElementById('chatList').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch(`${API}/api/jobs/my-approved`,{headers:H()});
+    const jobs = r.ok ? await r.json() : [];
+    document.getElementById('chatList').innerHTML = jobs.length ? jobs.map(j=>`
+      <div class="chat-row" onclick="openChat('${j._id}_${user._id||user.id}','${j.employerName||j.title}','${j.title}')">
+        <div class="chat-av">${(j.employerName||j.title||'?')[0]}</div>
+        <div class="chat-info"><div class="chat-name">${j.employerName||j.title}</div><div class="chat-preview">${j.area} · ${j.jobType||'זמנית'}</div></div>
+        <div class="chat-time">💬</div>
+      </div>`).join('') : '<div class="empty"><div class="empty-icon">💬</div><p>אין שיחות עדיין</p></div>';
+  } catch(e) {}
+}
+
+const PHONE=/(?:\d[\s\-.]?){9,}|מה.*?(?:טלפון|מספר|נייד)|(?:טלפון|מספר|נייד).*?שלך/i;
+
+function openChat(chatId, name, job) {
+  curChat=chatId;
+  document.getElementById('chatAv').textContent=(name||'?')[0];
+  document.getElementById('chatName').textContent=name;
+  document.getElementById('chatSub').textContent=job||'';
+  document.getElementById('chatOverlay').classList.add('open');
+  loadChatMsgs();
+  if(!chatSock) chatSock=io();
+  chatSock.emit('join_chat',chatId);
+  chatSock.off('receive_message');
+  chatSock.on('receive_message',msg=>{ if(msg.chatId===chatId) appendMsg({text:msg.message,sender:msg.sender,time:msg.time},false); });
+}
+function closeChat() { document.getElementById('chatOverlay').classList.remove('open'); curChat=null; }
+
+async function loadChatMsgs() {
+  document.getElementById('chatMsgs').innerHTML='<div class="chat-empty">טוען...</div>';
+  try {
+    const r=await fetch(`/api/chat/${curChat}`,{headers:H()});
+    const msgs=r.ok?await r.json():[];
+    const c=document.getElementById('chatMsgs');
+    if(!msgs.length){c.innerHTML='<div class="chat-empty">אין הודעות עדיין 👋</div>';return;}
+    c.innerHTML='';
+    msgs.forEach(m=>appendMsg({text:m.text,sender:m.sender?._id||m.sender,time:m.createdAt},true));
+    c.scrollTop=c.scrollHeight;
+  } catch(e) {}
+}
+
+function appendMsg(msg, bulk) {
+  const myId=user._id||user.id;
+  const mine=msg.sender===myId;
+  const c=document.getElementById('chatMsgs');
+  const empty=c.querySelector('.chat-empty'); if(empty) empty.remove();
+  const t=msg.time?fmtT(new Date(msg.time)):'';
+  const d=document.createElement('div'); d.className=`msg ${mine?'mine':'theirs'}`;
+  d.innerHTML=`<div class="msg-bubble">${(msg.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div><div class="msg-t">${t}</div>`;
+  c.appendChild(d);
+  if(!bulk) c.scrollTop=c.scrollHeight;
+}
+
+async function sendMsg() {
+  const inp=document.getElementById('chatInput');
+  const text=inp.value.trim();
+  if(!text||!curChat) return;
+  if(PHONE.test(text)&&!confirm('⚠️ נראה שאתה מנסה לשתף טלפון.\nכל עסקאות חייבות להיות דרך שעתי.\n\nלהמשיך?')) return;
+  inp.value=''; inp.style.height='auto';
+  try {
+    const r=await fetch(`/api/chat/${curChat}`,{method:'POST',headers:H(),body:JSON.stringify({text})});
+    if(!r.ok) throw new Error();
+    const m=await r.json();
+    if(chatSock) chatSock.emit('send_message',{chatId:curChat,message:text,sender:user._id||user.id,time:new Date().toISOString()});
+    appendMsg({text:m.text,sender:user._id||user.id,time:m.createdAt},false);
+  } catch(e) { toast('שגיאה','err'); }
+}
+
+// ── PROFILE ──
+async function loadProfile() {
+  document.getElementById('pAreas').innerHTML = AREAS.map(a=>`<label class="cb-label"><input type="checkbox" value="${a}"> ${a}</label>`).join('');
+  document.getElementById('pTypes').innerHTML = TYPES.map(t=>`<label class="cb-label"><input type="checkbox" value="${t}"> ${t}</label>`).join('');
+  try {
+    const r=await fetch(`${API}/api/auth/me`,{headers:H()});
+    const u=r.ok?await r.json():user;
+    document.getElementById('pFirst').value=u.firstName||'';
+    document.getElementById('pLast').value=u.lastName||'';
+    document.getElementById('pPhone').value=u.phone||'';
+    document.getElementById('pProf').value=u.profession||'';
+    document.getElementById('pBio').value=u.bio||'';
+    (u.preferredAreas||[]).forEach(a=>{const cb=document.querySelector(`#pAreas input[value="${a}"]`);if(cb)cb.checked=true;});
+    (u.preferredJobTypes||[]).forEach(t=>{const cb=document.querySelector(`#pTypes input[value="${t}"]`);if(cb)cb.checked=true;});
+  } catch(e) {}
+}
+
+document.getElementById('profileForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  try {
+    const body={
+      firstName:document.getElementById('pFirst').value, lastName:document.getElementById('pLast').value,
+      phone:document.getElementById('pPhone').value, profession:document.getElementById('pProf').value,
+      bio:document.getElementById('pBio').value,
+      preferredAreas:[...document.querySelectorAll('#pAreas input:checked')].map(c=>c.value),
+      preferredJobTypes:[...document.querySelectorAll('#pTypes input:checked')].map(c=>c.value),
+    };
+    const pwd=document.getElementById('pPwd').value; if(pwd) body.password=pwd;
+    const r=await fetch(`${API}/api/auth/profile`,{method:'PATCH',headers:H(),body:JSON.stringify(body)});
+    if(!r.ok) throw new Error();
+    const u=await r.json(); localStorage.setItem('user',JSON.stringify({...user,...u}));
+    toast('נשמר ✓','ok');
+  } catch(e) { toast('שגיאה','err'); }
+});
+
+document.getElementById('chatOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('chatOverlay'))closeChat();});
+document.getElementById('applyModal').addEventListener('click',e=>{if(e.target===document.getElementById('applyModal'))closeApply();});
+
+function logout() { localStorage.clear(); window.location='/pages/login.html'; }
+
+// Init
+loadOverview();
+loadJobs();
+</script>
+</body>
+</html>
