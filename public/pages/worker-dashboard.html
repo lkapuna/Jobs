@@ -111,7 +111,7 @@
 
     /* BUTTONS */
     .btn { padding:9px 18px; border-radius:10px; border:none; font-family:'Heebo',sans-serif; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.2s; }
-    .btn-primary { background:var(--accent); color:#000; width:100%; padding:15px; font-size:1rem; border-radius:14px; font-size:0.95rem; }
+    .btn-primary { background:var(--accent); color:#fff; width:100%; padding:15px; font-size:1rem; border-radius:14px; font-size:0.95rem; }
     .btn-secondary { background:var(--surface2); color:var(--text); width:100%; padding:15px; font-size:0.95rem; border-radius:14px; border:1px solid var(--border); }
     .btn-sm { padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-family:'Heebo',sans-serif; font-size:0.75rem; font-weight:700; cursor:pointer; }
     .btn-apply { width:100%; padding:12px; border-radius:10px; background:rgba(224,90,43,0.1); border:1px solid rgba(224,90,43,0.25); color:var(--accent); font-family:'Heebo',sans-serif; font-size:0.88rem; font-weight:700; cursor:pointer; margin-top:10px; }
@@ -163,11 +163,15 @@
     .chat-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:300; display:none; align-items:flex-end; }
     .chat-overlay.open { display:flex; }
     .chat-box { width:100%; height:92vh; background:#111827; border-radius:20px 20px 0 0; display:flex; flex-direction:column; overflow:hidden; }
-    .chat-hdr { padding:14px 16px; background:#0d1520; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:10px; }
-    .chat-hdr-av { width:36px; height:36px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:900; color:#000; font-size:0.9rem; flex-shrink:0; }
+    .chat-hdr { padding:0; background:#0d1520; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; }
+    .chat-back { display:flex; align-items:center; gap:10px; padding:14px 16px; cursor:pointer; background:none; border:none; border-bottom:1px solid rgba(255,255,255,0.06); width:100%; text-align:right; }
+    .chat-back-arrow { font-size:1.3rem; color:#fff; line-height:1; }
+    .chat-back-label { font-size:0.82rem; color:rgba(240,237,232,0.55); font-family:"Heebo",sans-serif; }
+    .chat-hdr-info { display:flex; align-items:center; gap:10px; padding:12px 16px; }
+    .chat-hdr-av { width:36px; height:36px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:900; color:#fff; font-size:0.9rem; flex-shrink:0; }
     .chat-hdr-name { font-weight:700; font-size:0.9rem; color:#f0ede8; }
     .chat-hdr-sub { font-size:0.72rem; color:rgba(240,237,232,0.4); }
-    .chat-close { margin-right:auto; background:rgba(255,255,255,0.08); border:none; color:#fff; font-size:1.1rem; cursor:pointer; padding:0; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .chat-close { display:none; }
     .chat-msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; -webkit-overflow-scrolling:touch; }
     .msg { max-width:78%; display:flex; flex-direction:column; }
     .msg.mine { align-self:flex-start; }
@@ -306,7 +310,7 @@
       </div>
     </div>
     <div style="margin-top:12px;padding:0">
-      <button onclick="logout()" style="width:100%;padding:14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Heebo',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer">התנתק</button>
+      <button onclick="logout()" style="width:100%;padding:14px;border-radius:12px;border:1.5px solid rgba(224,90,43,0.4);background:rgba(224,90,43,0.08);color:#E05A2B;font-family:'Heebo',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer">🚪 התנתק</button>
     </div>
   </div>
 
@@ -339,12 +343,17 @@
 </div>
 
 <!-- CHAT -->
-<div class="chat-overlay" id="chatOverlay">
+<div class="chat-overlay" id="chatOverlay" onclick="if(event.target===this)closeChat()">
   <div class="chat-box">
     <div class="chat-hdr">
-      <div class="chat-hdr-av" id="chatAv">?</div>
-      <div><div class="chat-hdr-name" id="chatName">שיחה</div><div class="chat-hdr-sub" id="chatSub"></div></div>
-      <button class="chat-close" onclick="closeChat()">✕</button>
+      <button class="chat-back" onclick="closeChat()">
+        <span class="chat-back-arrow">←</span>
+        <span class="chat-back-label">חזור</span>
+      </button>
+      <div class="chat-hdr-info">
+        <div class="chat-hdr-av" id="chatAv">?</div>
+        <div><div class="chat-hdr-name" id="chatName">שיחה</div><div class="chat-hdr-sub" id="chatSub"></div></div>
+      </div>
     </div>
     <div class="chat-msgs" id="chatMsgs"><div class="chat-empty">טוען...</div></div>
     <div class="chat-input-row">
@@ -422,8 +431,9 @@ async function loadClock() {
   try {
     const r = await fetch(`${API}/api/jobs/my-approved`, {headers:H()});
     const jobs = r.ok ? await r.json() : [];
+    console.log('approved jobs:', JSON.stringify(jobs));
     const sel = document.getElementById('jobSelect');
-    sel.innerHTML = jobs.length ? '<option value="">בחר משרה...</option>' + jobs.map(j=>`<option value="${j._id}|${j.employerId||j.employer}">${j.title} — ${j.area}</option>`).join('') : '<option value="">אין משרות מאושרות</option>';
+    sel.innerHTML = jobs.length ? '<option value="">בחר משרה...</option>' + jobs.map(j=>`<option value="${j._id}|${j.employer?._id||j.employer}">${j.title} — ${j.area||''}</option>`).join('') : '<option value="">אין משרות מאושרות עדיין</option>';
   } catch(e) {}
   updateClockUI();
 }

@@ -2,8 +2,9 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
+  <meta name="apple-mobile-web-app-title" content="שעתי">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>פאנל ניהול — WorkHour</title>
+  <title>פאנל ניהול — שעתי</title>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -640,14 +641,14 @@
 <!-- SIDEBAR -->
 
 <div class="mobile-topbar">
-  <div class="mobile-logo">Work<span>Hour</span></div>
+  <div class="mobile-logo">שע<span>תי</span></div>
   <div class="mobile-page-title" id="mobilePageTitle">סקירה כללית</div>
   <div class="mobile-avatar" id="mobileAvatar" style="background:var(--red)">א</div>
 </div>
 
 <aside class="sidebar">
   <div class="sidebar-logo">
-    <div class="logo-text">Work<span>Hour</span></div>
+    <div class="logo-text">שע<span>תי</span></div>
     <div class="logo-sub">Admin Panel</div>
   </div>
 
@@ -763,6 +764,18 @@
             <option value="active">פעיל</option>
             <option value="pending_approval">ממתין לאישור</option>
             <option value="approved">מאושר</option>
+            <option value="disputed">מחלוקת</option>
+          </select>
+        </div>
+        <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
+          <input id="sessSearch" type="text" placeholder="🔍 חפש עובד או מעסיק..." 
+            oninput="filterSessions()"
+            style="padding:8px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.85rem;outline:none;flex:1;min-width:160px">
+          <select id="sessStatusFilter" onchange="filterSessions()"
+            style="padding:8px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.85rem;outline:none">
+            <option value="">כל הסטטוסים</option>
+            <option value="approved">מאושר</option>
+            <option value="pending_approval">ממתין לאישור</option>
             <option value="disputed">מחלוקת</option>
           </select>
         </div>
@@ -1123,6 +1136,16 @@
   // ── SESSIONS ──
   let allSessions = [];
 
+
+  function filterSessions() {
+    const q = (document.getElementById('sessSearch')?.value||'').toLowerCase();
+    const st = document.getElementById('sessStatusFilter')?.value||'';
+    const filtered = allSessions.filter(s => {
+      const name = `${s.worker?.firstName||''} ${s.worker?.lastName||''} ${s.employer?.businessName||''}`.toLowerCase();
+      return (!q || name.includes(q)) && (!st || s.status === st);
+    });
+    renderSessions(filtered);
+  }
   async function loadSessions() {
     document.getElementById('sessionsTable').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
@@ -1142,26 +1165,58 @@
   }
 
   function renderSessions(sessions) {
+    const totalHours = sessions.reduce((s,x)=>s+(x.totalHours||0),0);
+    const totalPay   = sessions.reduce((s,x)=>s+(x.netWorkerPay||0),0);
+    const totalFees  = sessions.reduce((s,x)=>s+(x.platformFee||((x.totalEmployerCost||0)-(x.netWorkerPay||0))),0);
     document.getElementById('sessionsCount').textContent = `${sessions.length} משמרות`;
+    const fmtT = d => d ? new Date(d).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) : '—';
     document.getElementById('sessionsTable').innerHTML = sessions.length ? `
-      <table>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);margin-bottom:1px">
+        <div style="background:var(--surface);padding:14px 20px;text-align:center">
+          <div style="font-size:1.3rem;font-weight:900;color:var(--text)">${totalHours.toFixed(1)}h</div>
+          <div style="font-size:0.72rem;color:var(--muted);font-weight:600">סה"כ שעות</div>
+        </div>
+        <div style="background:var(--surface);padding:14px 20px;text-align:center">
+          <div style="font-size:1.3rem;font-weight:900;color:var(--green)">₪${fmt(totalPay)}</div>
+          <div style="font-size:0.72rem;color:var(--muted);font-weight:600">שכר לעובדים</div>
+        </div>
+        <div style="background:var(--surface);padding:14px 20px;text-align:center">
+          <div style="font-size:1.3rem;font-weight:900;color:var(--accent)">₪${fmt(totalFees)}</div>
+          <div style="font-size:0.72rem;color:var(--muted);font-weight:600">עמלות</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+      <table style="min-width:700px">
         <thead><tr>
-          <th>עובד</th><th>מעסיק</th><th>תאריך</th><th>שעות</th><th>שכר נטו</th><th>סטטוס</th>
+          <th>עובד</th><th>מעסיק</th><th>תאריך</th>
+          <th>כניסה</th><th>יציאה</th><th>שעות</th>
+          <th>שכר נטו</th><th>עלות מעסיק</th><th>סטטוס</th>
         </tr></thead>
         <tbody>
           ${sessions.map(s => `
-            <tr>
-              <td>${s.worker?.firstName ? `${s.worker.firstName} ${s.worker.lastName}` : '—'}</td>
+            <tr onclick="showSessionDetail('${s._id}')" style="cursor:pointer">
+              <td>
+                <div style="font-weight:700">${s.worker?.firstName ? `${s.worker.firstName} ${s.worker.lastName}` : '—'}</div>
+                <div style="font-size:0.75rem;color:var(--muted)">${s.job?.title||''}</div>
+              </td>
               <td>${s.employer?.businessName || '—'}</td>
-              <td style="color:var(--muted);font-size:0.85rem">${fmtDate(s.date)}</td>
-              <td><strong>${s.totalHours}h</strong></td>
+              <td style="color:var(--muted);font-size:0.82rem;white-space:nowrap">${fmtDate(s.date)}</td>
+              <td style="font-size:0.85rem;font-weight:600">${fmtT(s.startTime)}</td>
+              <td style="font-size:0.85rem;font-weight:600">${fmtT(s.endTime)}</td>
+              <td><strong style="color:var(--text)">${(s.totalHours||0).toFixed(2)}h</strong></td>
               <td style="color:var(--green);font-weight:700">₪${fmt(s.netWorkerPay)}</td>
+              <td style="color:var(--muted);font-size:0.85rem">₪${fmt(s.totalEmployerCost)}</td>
               <td>${statusBadge(s.status)}</td>
             </tr>
           `).join('')}
         </tbody>
       </table>
+      </div>
     ` : '<div class="empty-state"><div class="empty-icon">⏱️</div><p>אין משמרות</p></div>';
+  }
+
+  function showSessionDetail(id) {
+    // עתידי: modal עם פרטי משמרת מלאים
   }
 
   // ── DISPUTES ──
@@ -1378,7 +1433,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `דוח_שעות_WorkHour_${new Date().toLocaleDateString('he-IL').replace(/\//g,'-')}.csv`;
+      a.download = `דוח_שעות_שעתי_${new Date().toLocaleDateString('he-IL').replace(/\//g,'-')}.csv`;
       a.click();
       URL.revokeObjectURL(url);
       showToast('הקובץ הורד בהצלחה ✓');
