@@ -808,6 +808,7 @@
                     ? `<button class="btn-sm btn-sm-danger" onclick="toggleBlock('${u._id}', false)">🚫 חסום</button>`
                     : `<button class="btn-sm btn-sm-success" onclick="toggleBlock('${u._id}', true)">✓ שחרר</button>`
                   }
+                  <button class="btn-sm btn-sm-danger" onclick="deleteUser('${u._id}', '${u.firstName || u.businessName || u.email}')">🗑️ מחק</button>
                 </div>
               </td>
             </tr>
@@ -831,15 +832,27 @@
     } catch(e) { showToast('שגיאה בפעולה', 'error'); }
   }
 
+  async function deleteUser(userId, name) {
+    if (!confirm(`למחוק את ${name}? לא ניתן לבטל!`)) return;
+    try {
+      const res = await fetch(`${API}/api/admin/users/${userId}`, { method: 'DELETE', headers: headers() });
+      if (!res.ok) throw new Error();
+      cache.users = null;
+      showToast('המשתמש נמחק');
+      loadUsers();
+    } catch(e) { showToast('שגיאה במחיקה', 'error'); }
+  }
+
   // ── JOBS ──
   let allJobs = [];
+  let editingJobId = null;
 
   async function loadJobs() {
     if (cache.jobs) { renderJobs(cache.jobs); return; }
     document.getElementById('jobsTable').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     try {
-      const res = await fetch(`${API}/api/jobs`, { headers: headers() });
-      allJobs = await res.json();
+      const res = await fetch(`${API}/api/admin/jobs`, { headers: headers() });
+      allJobs = res.ok ? await res.json() : [];
       cache.jobs = allJobs;
       renderJobs(allJobs);
     } catch(e) { showToast('שגיאה בטעינת משרות', 'error'); }
@@ -858,7 +871,7 @@
     document.getElementById('jobsTable').innerHTML = jobs.length ? `
       <table>
         <thead><tr>
-          <th>שם המשרה</th><th>מעסיק</th><th>אזור</th><th>שכר/שעה</th><th>סוג</th><th>מועמדים</th><th>סטטוס</th>
+          <th>שם המשרה</th><th>מעסיק</th><th>אזור</th><th>שכר/שעה</th><th>סוג</th><th>מועמדים</th><th>סטטוס</th><th>פעולות</th>
         </tr></thead>
         <tbody>
           ${jobs.map(j => `
@@ -870,11 +883,58 @@
               <td><span class="badge ${j.jobType === 'קבועה' ? 'badge-approved' : 'badge-pending'}">${j.jobType}</span></td>
               <td style="text-align:center">${j.applicants?.length || 0}</td>
               <td><span class="badge ${j.isActive ? 'badge-active' : 'badge-blocked'}">${j.isActive ? 'פעילה' : 'לא פעילה'}</span></td>
+              <td>
+                <div class="action-btns">
+                  <button class="btn-sm btn-sm-primary" onclick="openEditJob('${j._id}','${j.title}','${j.area}',${j.hourlyRate},'${j.jobType}','${j.profession||''}')">✏️ ערוך</button>
+                  <button class="btn-sm btn-sm-danger" onclick="deleteJob('${j._id}','${j.title}')">🗑️ מחק</button>
+                </div>
+              </td>
             </tr>
           `).join('')}
         </tbody>
       </table>
     ` : '<div class="empty-state"><div class="empty-icon">💼</div><p>אין משרות עדיין</p></div>';
+  }
+
+  async function deleteJob(jobId, title) {
+    if (!confirm(`למחוק את המשרה "${title}"?`)) return;
+    try {
+      const res = await fetch(`${API}/api/admin/jobs/${jobId}`, { method: 'DELETE', headers: headers() });
+      if (!res.ok) throw new Error();
+      cache.jobs = null;
+      showToast('המשרה נמחקה');
+      loadJobs();
+    } catch(e) { showToast('שגיאה במחיקה', 'error'); }
+  }
+
+  function openEditJob(id, title, area, rate, type, profession) {
+    editingJobId = id;
+    document.getElementById('editJobTitle').value = title;
+    document.getElementById('editJobArea').value = area;
+    document.getElementById('editJobRate').value = rate;
+    document.getElementById('editJobType').value = type;
+    document.getElementById('editJobProfession').value = profession;
+    document.getElementById('editJobModal').style.display = 'flex';
+  }
+
+  async function saveEditJob() {
+    try {
+      const res = await fetch(`${API}/api/admin/jobs/${editingJobId}`, {
+        method: 'PATCH', headers: headers(),
+        body: JSON.stringify({
+          title: document.getElementById('editJobTitle').value,
+          area: document.getElementById('editJobArea').value,
+          hourlyRate: Number(document.getElementById('editJobRate').value),
+          jobType: document.getElementById('editJobType').value,
+          profession: document.getElementById('editJobProfession').value,
+        })
+      });
+      if (!res.ok) throw new Error();
+      cache.jobs = null;
+      document.getElementById('editJobModal').style.display = 'none';
+      showToast('המשרה עודכנה ✓');
+      loadJobs();
+    } catch(e) { showToast('שגיאה בעדכון', 'error'); }
   }
 
   // ── SESSIONS ──
@@ -1021,5 +1081,32 @@
       }
     }).catch(() => {});
 </script>
+<!-- EDIT JOB MODAL -->
+<div class="modal-overlay" id="editJobModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;padding:20px;display:none">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:480px">
+    <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:20px">✏️ עריכת משרה</h3>
+    <div style="margin-bottom:14px"><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px">שם המשרה</label><input id="editJobTitle" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px">אזור</label><input id="editJobArea" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none"></div>
+      <div><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px">שכר/שעה</label><input id="editJobRate" type="number" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+      <div><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px">סוג</label><select id="editJobType" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none"><option value="זמנית">זמנית</option><option value="קבועה">קבועה</option></select></div>
+      <div><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px">מקצוע</label><input id="editJobProfession" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none"></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="document.getElementById('editJobModal').style.display='none'" style="padding:10px 22px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-family:Heebo,sans-serif;font-weight:700;cursor:pointer">ביטול</button>
+      <button onclick="saveEditJob()" style="padding:10px 22px;border-radius:10px;background:var(--accent);border:none;color:#fff;font-family:Heebo,sans-serif;font-weight:700;cursor:pointer">שמור שינויים</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  
+  document.getElementById('editJobModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+</script>
+
 </body>
 </html>

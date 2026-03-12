@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>דשבורד עובד — WorkHour</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0f1923;
+      --surface: #162030;
+      --surface2: #1e2d40;
+      --border: rgba(255,255,255,0.07);
+      --accent: #00c896;
+      --accent2: #3b9eff;
+      --text: #e8f0fe;
+      --muted: rgba(232,240,254,0.45);
+      --sidebar-w: 240px;
+    }
+    body { font-family:'Heebo',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+
+    /* SIDEBAR */
+    .sidebar { width:var(--sidebar-w); background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; position:fixed; right:0; top:0; height:100vh; z-index:50; }
+    .sidebar-logo { padding:28px 24px 20px; border-bottom:1px solid var(--border); }
+    .logo-text { font-size:1.5rem; font-weight:900; color:#fff; }
+    .logo-text span { color:var(--accent); }
+    .logo-sub { font-size:0.7rem; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; margin-top:3px; }
+    .sidebar-nav { flex:1; padding:16px 12px; }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:11px 13px; border-radius:10px; color:var(--muted); font-size:0.92rem; font-weight:500; cursor:pointer; transition:all 0.18s; margin-bottom:3px; }
+    .nav-item:hover { background:var(--surface2); color:var(--text); }
+    .nav-item.active { background:rgba(0,200,150,0.12); color:var(--accent); }
+    .nav-item .icon { font-size:1.1rem; width:22px; text-align:center; }
+    .sidebar-footer { padding:16px 12px; border-top:1px solid var(--border); }
+    .worker-chip { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface2); border-radius:10px; }
+    .w-avatar { width:36px; height:36px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:0.95rem; color:#000; flex-shrink:0; }
+    .w-name { font-size:0.88rem; font-weight:700; }
+    .w-role { font-size:0.72rem; color:var(--muted); }
+    .logout-btn { margin-right:auto; background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; transition:color 0.2s; }
+    .logout-btn:hover { color:var(--accent); }
+
+    /* MAIN */
+    .main { margin-right:var(--sidebar-w); flex:1; display:flex; flex-direction:column; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; padding:20px 32px; background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:40; }
+    .page-title { font-size:1.25rem; font-weight:800; }
+    .page-sub { font-size:0.82rem; color:var(--muted); margin-top:2px; }
+    .content { padding:28px 32px; flex:1; }
+    .section { display:none; }
+    .section.active { display:block; }
+
+    /* STATS */
+    .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:28px; }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px 24px; transition:transform 0.2s; }
+    .stat-card:hover { transform:translateY(-2px); }
+    .stat-icon { font-size:1.6rem; margin-bottom:10px; }
+    .stat-val { font-size:2rem; font-weight:900; }
+    .stat-val.green { color:var(--accent); }
+    .stat-val.blue { color:var(--accent2); }
+    .stat-label { font-size:0.8rem; color:var(--muted); margin-top:5px; }
+
+    /* CLOCK */
+    .clock-card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:32px; text-align:center; margin-bottom:20px; }
+    .clock-status { font-size:0.85rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-bottom:16px; }
+    .clock-time { font-size:3.5rem; font-weight:900; font-variant-numeric:tabular-nums; margin-bottom:8px; }
+    .clock-time.working { color:var(--accent); }
+    .clock-date { color:var(--muted); font-size:0.9rem; margin-bottom:28px; }
+    .clock-btn { padding:16px 48px; border-radius:50px; border:none; font-family:'Heebo',sans-serif; font-size:1.1rem; font-weight:800; cursor:pointer; transition:all 0.2s; }
+    .clock-btn.start { background:var(--accent); color:#000; }
+    .clock-btn.start:hover { background:#00e0a8; transform:scale(1.02); }
+    .clock-btn.end { background:rgba(233,69,96,0.15); color:#e94560; border:2px solid rgba(233,69,96,0.3); }
+    .clock-btn.end:hover { background:rgba(233,69,96,0.25); }
+    .clock-meta { margin-top:16px; font-size:0.85rem; color:var(--muted); }
+
+    /* JOBS */
+    .search-bar { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+    .search-input { flex:1; min-width:200px; padding:11px 16px; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Heebo',sans-serif; font-size:0.92rem; outline:none; transition:border-color 0.2s; }
+    .search-input:focus { border-color:var(--accent); }
+    .search-input::placeholder { color:var(--muted); }
+    .filter-select { padding:11px 12px; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Heebo',sans-serif; font-size:0.88rem; outline:none; cursor:pointer; }
+    .filter-select option { background:var(--surface); }
+
+    .jobs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+    .job-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px; transition:all 0.2s; }
+    .job-card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,200,150,0.1); }
+    .job-card-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+    .job-title { font-size:1rem; font-weight:700; }
+    .job-type { font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:20px; background:rgba(59,158,255,0.12); color:var(--accent2); }
+    .job-business { font-size:0.85rem; color:var(--muted); margin-bottom:10px; }
+    .job-tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+    .job-tag { font-size:0.76rem; color:var(--muted); background:var(--surface2); padding:3px 10px; border-radius:20px; }
+    .job-rate { font-size:1.4rem; font-weight:900; color:var(--accent); margin-bottom:14px; }
+    .job-rate span { font-size:0.8rem; font-weight:500; color:var(--muted); }
+    .job-desc { font-size:0.82rem; color:var(--muted); line-height:1.5; margin-bottom:16px; }
+    .apply-btn { width:100%; padding:11px; background:var(--accent); border:none; border-radius:10px; color:#000; font-family:'Heebo',sans-serif; font-size:0.92rem; font-weight:800; cursor:pointer; transition:all 0.2s; }
+    .apply-btn:hover { background:#00e0a8; }
+    .apply-btn.applied { background:var(--surface2); color:var(--muted); cursor:default; }
+
+    /* EARNINGS */
+    .earnings-summary { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+    .earning-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; }
+    .earning-card h3 { font-size:0.82rem; color:var(--muted); font-weight:600; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.06em; }
+    .earning-big { font-size:2.2rem; font-weight:900; color:var(--accent); }
+    .earning-sub { font-size:0.8rem; color:var(--muted); margin-top:5px; }
+
+    /* PANEL */
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; margin-bottom:20px; }
+    .panel-header { display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid var(--border); }
+    .panel-title { font-size:1rem; font-weight:700; }
+
+    /* HISTORY TABLE */
+    table { width:100%; border-collapse:collapse; }
+    thead th { padding:12px 20px; text-align:right; font-size:0.75rem; font-weight:700; color:var(--muted); letter-spacing:0.06em; text-transform:uppercase; border-bottom:1px solid var(--border); background:var(--surface2); }
+    tbody tr { border-bottom:1px solid var(--border); transition:background 0.15s; }
+    tbody tr:hover { background:rgba(255,255,255,0.02); }
+    tbody tr:last-child { border-bottom:none; }
+    td { padding:14px 20px; font-size:0.88rem; vertical-align:middle; }
+
+    /* BADGES */
+    .badge { display:inline-flex; align-items:center; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; }
+    .badge-approved { background:rgba(0,200,150,0.12); color:var(--accent); }
+    .badge-pending { background:rgba(59,158,255,0.12); color:var(--accent2); }
+    .badge-disputed { background:rgba(233,69,96,0.12); color:#e94560; }
+    .badge-active { background:rgba(0,200,150,0.12); color:var(--accent); }
+
+    /* APPLY MODAL */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:100; display:none; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:36px; width:100%; max-width:480px; }
+    .modal h3 { font-size:1.3rem; font-weight:800; margin-bottom:6px; }
+    .modal-sub { color:var(--muted); font-size:0.88rem; margin-bottom:24px; }
+    .form-group { margin-bottom:16px; }
+    label { display:block; font-size:0.82rem; font-weight:700; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em; }
+    textarea { width:100%; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Heebo',sans-serif; font-size:0.92rem; outline:none; resize:vertical; min-height:100px; transition:border-color 0.2s; }
+    textarea:focus { border-color:var(--accent); }
+    .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
+    .btn { padding:10px 22px; border-radius:10px; font-family:'Heebo',sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; transition:all 0.2s; border:none; }
+    .btn-primary { background:var(--accent); color:#000; }
+    .btn-primary:hover { background:#00e0a8; }
+    .btn-secondary { background:var(--surface2); color:var(--text); }
+    .btn-secondary:hover { background:rgba(255,255,255,0.1); }
+
+    /* EMPTY + LOADING */
+    .empty-state { text-align:center; padding:50px 20px; color:var(--muted); }
+    .empty-icon { font-size:3rem; margin-bottom:12px; }
+    .loading { text-align:center; padding:40px; color:var(--muted); }
+    .spinner { width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 10px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* TOAST */
+    .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:12px 24px; border-radius:12px; font-size:0.9rem; font-weight:600; opacity:0; transition:all 0.3s; z-index:999; pointer-events:none; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .toast.success { border-color:rgba(0,200,150,0.4); color:var(--accent); }
+    .toast.error { border-color:rgba(233,69,96,0.4); color:#e94560; }
+
+    @media (max-width:768px) { .sidebar { display:none; } .main { margin-right:0; } .content { padding:20px 16px; } .stats-grid { grid-template-columns:1fr 1fr; } }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">Work<span>Hour</span></div>
+    <div class="logo-sub">פאנל עובד</div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" onclick="navigate('overview')"><span class="icon">📊</span> סקירה כללית</div>
+    <div class="nav-item" onclick="navigate('clock')"><span class="icon">⏱️</span> שעון נוכחות</div>
+    <div class="nav-item" onclick="navigate('jobs')"><span class="icon">🔍</span> חיפוש עבודה</div>
+    <div class="nav-item" onclick="navigate('earnings')"><span class="icon">💰</span> הרווחים שלי</div>
+    <div class="nav-item" onclick="navigate('history')"><span class="icon">📋</span> היסטוריה</div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="worker-chip">
+      <div class="w-avatar" id="wInitial">ע</div>
+      <div>
+        <div class="w-name" id="wName">טוען...</div>
+        <div class="w-role">עובד</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">⏻</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title" id="pageTitle">סקירה כללית</div>
+      <div class="page-sub" id="pageSub">ברוך הבא לפאנל העובד</div>
+    </div>
+    <button class="btn btn-secondary" onclick="refreshCurrent()">↻ רענון</button>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div class="section active" id="section-overview">
+      <div class="stats-grid" id="statsGrid">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">משמרות אחרונות</span></div>
+        <div id="recentSessions"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- CLOCK -->
+    <div class="section" id="section-clock">
+      <div class="clock-card">
+        <div class="clock-status" id="clockStatus">לא בעבודה</div>
+        <div class="clock-time" id="clockDisplay">00:00:00</div>
+        <div class="clock-date" id="clockDate"></div>
+        <button class="clock-btn start" id="clockBtn" onclick="toggleClock()">▶ התחל עבודה</button>
+        <div class="clock-meta" id="clockMeta"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">משמרת נוכחית</span></div>
+        <div id="activeSessionInfo" style="padding:24px;color:var(--muted);font-size:0.9rem">אין משמרת פעילה כרגע</div>
+      </div>
+    </div>
+
+    <!-- JOBS -->
+    <div class="section" id="section-jobs">
+      <div class="search-bar">
+        <input type="text" class="search-input" id="jobSearch" placeholder="🔍 חיפוש לפי שם משרה..." oninput="filterJobs()">
+        <select class="filter-select" id="areaFilter" onchange="filterJobs()">
+          <option value="">כל האזורים</option>
+          <option>תל אביב והמרכז</option>
+          <option>ירושלים</option>
+          <option>חיפה והצפון</option>
+          <option>באר שבע והדרום</option>
+          <option>השרון</option>
+          <option>שפלה</option>
+        </select>
+        <select class="filter-select" id="typeFilter" onchange="filterJobs()">
+          <option value="">כל הסוגים</option>
+          <option value="זמנית">זמנית</option>
+          <option value="קבועה">קבועה</option>
+        </select>
+      </div>
+      <div class="jobs-grid" id="jobsGrid">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- EARNINGS -->
+    <div class="section" id="section-earnings">
+      <div class="earnings-summary" id="earningsSummary">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">פירוט תשלומים</span></div>
+        <div id="earningsTable"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="section" id="section-history">
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">היסטוריית משמרות</span></div>
+        <div id="historyTable"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- APPLY MODAL -->
+<div class="modal-overlay" id="applyModal">
+  <div class="modal">
+    <h3 id="applyJobTitle">פנייה למשרה</h3>
+    <p class="modal-sub">שלח הודעה קצרה למעסיק — הפרופיל שלך יצורף אוטומטית</p>
+    <div class="form-group">
+      <label>הודעה למעסיק (אופציונלי)</label>
+      <textarea id="applyMessage" placeholder="שלום, אני מעוניין/ת במשרה..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeApply()">ביטול</button>
+      <button class="btn btn-primary" onclick="submitApply()">שלח פנייה</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = '';
+  const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  if (!token || user.role !== 'worker') window.location = '/pages/login.html';
+
+  document.getElementById('wName').textContent = user.name || 'עובד';
+  document.getElementById('wInitial').textContent = (user.name || 'ע')[0];
+
+  const headers = () => ({ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` });
+  const fmt = n => new Intl.NumberFormat('he-IL').format(Math.round(n||0));
+  const fmtDate = d => new Date(d).toLocaleDateString('he-IL', {day:'2-digit',month:'2-digit',year:'2-digit'});
+  const fmtTime = d => new Date(d).toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'});
+
+  let currentSection = 'overview';
+  let allJobs = [];
+  let currentJobId = null;
+  let clockInterval = null;
+  let clockStart = null;
+  let isWorking = false;
+
+  const pageMeta = {
+    overview: { title:'סקירה כללית', sub:'ברוך הבא לפאנל העובד' },
+    clock:    { title:'שעון נוכחות', sub:'עקוב אחרי שעות העבודה שלך' },
+    jobs:     { title:'חיפוש עבודה', sub:'מצא את המשרה המתאימה לך' },
+    earnings: { title:'הרווחים שלי', sub:'מעקב שכר ותשלומים' },
+    history:  { title:'היסטוריה', sub:'כל המשמרות שלך' },
+  };
+
+  function navigate(s) {
+    currentSection = s;
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll(`[onclick="navigate('${s}')"]`).forEach(el => el.classList.add('active'));
+    document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+    document.getElementById(`section-${s}`).classList.add('active');
+    document.getElementById('pageTitle').textContent = pageMeta[s].title;
+    document.getElementById('pageSub').textContent = pageMeta[s].sub;
+    loadSection(s);
+  }
+
+  function refreshCurrent() { loadSection(currentSection); }
+
+  function loadSection(s) {
+    if (s==='overview') loadOverview();
+    else if (s==='clock') loadClock();
+    else if (s==='jobs') loadJobs();
+    else if (s==='earnings') loadEarnings();
+    else if (s==='history') loadHistory();
+  }
+
+  function showToast(msg, type='success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast show ${type}`;
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // ── OVERVIEW ──
+  async function loadOverview() {
+    try {
+      const res = await fetch(`${API}/api/sessions/my`, { headers: headers() });
+      const data = res.ok ? await res.json() : { sessions:[], totalHours:0, totalEarned:0 };
+      const sessions = data.sessions || [];
+
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-val green">${(data.totalHours||0).toFixed(1)}</div><div class="stat-label">סה"כ שעות עבודה</div></div>
+        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val green">₪${fmt(data.totalEarned)}</div><div class="stat-label">סה"כ הרווחתי</div></div>
+        <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-val blue">${sessions.length}</div><div class="stat-label">משמרות שביצעתי</div></div>
+      `;
+
+      const recent = sessions.slice(0,5);
+      document.getElementById('recentSessions').innerHTML = recent.length ? `
+        <table>
+          <thead><tr><th>מעסיק</th><th>תאריך</th><th>שעות</th><th>שכר נטו</th><th>סטטוס</th></tr></thead>
+          <tbody>
+            ${recent.map(s => `
+              <tr>
+                <td style="font-weight:600">${s.employer?.businessName||'—'}</td>
+                <td style="color:var(--muted)">${fmtDate(s.date)}</td>
+                <td style="font-weight:700">${s.totalHours}h</td>
+                <td style="color:var(--accent);font-weight:700">₪${fmt(s.netWorkerPay)}</td>
+                <td><span class="badge badge-${s.status}">${s.status==='approved'?'מאושר ✓':s.status==='pending_approval'?'ממתין ⏳':s.status==='disputed'?'מחלוקת ⚠️':'פעיל'}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<div class="empty-state"><div class="empty-icon">⏱️</div><p>עדיין לא ביצעת משמרות</p></div>';
+    } catch(e) {
+      document.getElementById('statsGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>';
+    }
+  }
+
+  // ── CLOCK ──
+  function loadClock() {
+    updateClockDisplay();
+    const active = localStorage.getItem('activeSession');
+    if (active) {
+      const session = JSON.parse(active);
+      isWorking = true;
+      clockStart = new Date(session.startTime);
+      startClockTick();
+      updateClockUI(true);
+      document.getElementById('activeSessionInfo').innerHTML = `
+        <div style="padding:20px">
+          <div style="font-size:0.88rem;color:var(--muted);margin-bottom:8px">התחלת עבודה:</div>
+          <div style="font-size:1.1rem;font-weight:700">${fmtTime(session.startTime)}</div>
+        </div>
+      `;
+    }
+    setInterval(updateClockDisplay, 1000);
+  }
+
+  function updateClockDisplay() {
+    const now = new Date();
+    document.getElementById('clockDate').textContent = now.toLocaleDateString('he-IL', { weekday:'long', day:'numeric', month:'long' });
+    if (!isWorking) {
+      document.getElementById('clockDisplay').textContent = now.toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    }
+  }
+
+  function startClockTick() {
+    if (clockInterval) clearInterval(clockInterval);
+    clockInterval = setInterval(() => {
+      if (!clockStart) return;
+      const diff = Date.now() - clockStart.getTime();
+      const h = Math.floor(diff/3600000).toString().padStart(2,'0');
+      const m = Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
+      const s = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
+      document.getElementById('clockDisplay').textContent = `${h}:${m}:${s}`;
+    }, 1000);
+  }
+
+  function updateClockUI(working) {
+    const btn = document.getElementById('clockBtn');
+    const status = document.getElementById('clockStatus');
+    const display = document.getElementById('clockDisplay');
+    if (working) {
+      btn.textContent = '■ סיים עבודה';
+      btn.className = 'clock-btn end';
+      status.textContent = '● בעבודה עכשיו';
+      status.style.color = 'var(--accent)';
+      display.classList.add('working');
+    } else {
+      btn.textContent = '▶ התחל עבודה';
+      btn.className = 'clock-btn start';
+      status.textContent = 'לא בעבודה';
+      status.style.color = 'var(--muted)';
+      display.classList.remove('working');
+      if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+    }
+  }
+
+  async function toggleClock() {
+    if (!isWorking) {
+      // התחל עבודה — צריך employer ID
+      const employerId = prompt('הכנס מזהה מעסיק (employer ID):');
+      if (!employerId) return;
+      const hourlyRate = prompt('שכר לשעה (₪):');
+      if (!hourlyRate) return;
+
+      try {
+        const res = await fetch(`${API}/api/sessions/start`, {
+          method:'POST', headers:headers(),
+          body:JSON.stringify({ employerId, hourlyRate:Number(hourlyRate) })
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        const session = await res.json();
+        localStorage.setItem('activeSession', JSON.stringify(session));
+        isWorking = true;
+        clockStart = new Date(session.startTime);
+        startClockTick();
+        updateClockUI(true);
+        showToast('עבודה התחילה! ⏱️');
+      } catch(e) { showToast(e.message || 'שגיאה', 'error'); }
+    } else {
+      // סיים עבודה
+      try {
+        const res = await fetch(`${API}/api/sessions/end`, { method:'POST', headers:headers() });
+        if (!res.ok) throw new Error((await res.json()).error);
+        const data = await res.json();
+        localStorage.removeItem('activeSession');
+        isWorking = false;
+        clockStart = null;
+        updateClockUI(false);
+        showToast(`עבודה הסתיימה! ${data.summary.totalHours}h · ₪${fmt(data.summary.netPay)} נטו ✓`);
+        document.getElementById('activeSessionInfo').textContent = 'אין משמרת פעילה כרגע';
+      } catch(e) { showToast(e.message || 'שגיאה', 'error'); }
+    }
+  }
+
+  // ── JOBS ──
+  async function loadJobs() {
+    document.getElementById('jobsGrid').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const res = await fetch(`${API}/api/jobs`, { headers: headers() });
+      allJobs = res.ok ? await res.json() : [];
+      renderJobs(allJobs);
+    } catch(e) { document.getElementById('jobsGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>'; }
+  }
+
+  function filterJobs() {
+    const q = document.getElementById('jobSearch').value.toLowerCase();
+    const area = document.getElementById('areaFilter').value;
+    const type = document.getElementById('typeFilter').value;
+    const filtered = allJobs.filter(j => {
+      const matchQ = !q || j.title.toLowerCase().includes(q) || j.profession.toLowerCase().includes(q);
+      const matchArea = !area || j.area === area;
+      const matchType = !type || j.jobType === type;
+      return matchQ && matchArea && matchType;
+    });
+    renderJobs(filtered);
+  }
+
+  function renderJobs(jobs) {
+    document.getElementById('jobsGrid').innerHTML = jobs.length ? jobs.map(j => `
+      <div class="job-card">
+        <div class="job-card-top">
+          <div class="job-title">${j.title}</div>
+          <span class="job-type">${j.jobType}</span>
+        </div>
+        <div class="job-business">🏢 ${j.employer?.businessName||'—'}</div>
+        <div class="job-tags">
+          <span class="job-tag">📍 ${j.area}</span>
+          <span class="job-tag">🔧 ${j.profession}</span>
+          ${j.hours ? `<span class="job-tag">🕐 ${j.hours}</span>` : ''}
+        </div>
+        <div class="job-rate">₪${j.hourlyRate} <span>לשעה</span></div>
+        ${j.description ? `<div class="job-desc">${j.description.substring(0,100)}...</div>` : ''}
+        <button class="apply-btn" onclick="openApply('${j._id}', '${j.title}')">שלח פנייה</button>
+      </div>
+    `).join('') : '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><p>לא נמצאו משרות</p></div>';
+  }
+
+  // ── APPLY ──
+  function openApply(jobId, title) {
+    currentJobId = jobId;
+    document.getElementById('applyJobTitle').textContent = `פנייה: ${title}`;
+    document.getElementById('applyModal').classList.add('open');
+  }
+
+  function closeApply() {
+    document.getElementById('applyModal').classList.remove('open');
+    currentJobId = null;
+  }
+
+  async function submitApply() {
+    try {
+      const res = await fetch(`${API}/api/jobs/${currentJobId}/apply`, {
+        method:'POST', headers:headers(),
+        body:JSON.stringify({ message: document.getElementById('applyMessage').value })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      closeApply();
+      showToast('הפנייה נשלחה בהצלחה! 🎉');
+      document.getElementById('applyMessage').value = '';
+    } catch(e) { showToast(e.message || 'שגיאה', 'error'); }
+  }
+
+  // ── EARNINGS ──
+  async function loadEarnings() {
+    try {
+      const res = await fetch(`${API}/api/sessions/my`, { headers: headers() });
+      const data = res.ok ? await res.json() : { sessions:[], totalHours:0, totalEarned:0 };
+      const sessions = (data.sessions||[]).filter(s => s.status==='approved');
+      const totalFees = sessions.reduce((s,x) => s+(x.workerFee||0), 0);
+
+      document.getElementById('earningsSummary').innerHTML = `
+        <div class="earning-card"><h3>💰 סה"כ הרווחתי (נטו)</h3><div class="earning-big">₪${fmt(data.totalEarned)}</div><div class="earning-sub">אחרי עמלת האפליקציה</div></div>
+        <div class="earning-card"><h3>📊 עמלות ששולמו</h3><div class="earning-big" style="color:var(--accent2)">₪${fmt(totalFees)}</div><div class="earning-sub">3 ₪ לשעה לאפליקציה</div></div>
+      `;
+
+      document.getElementById('earningsTable').innerHTML = sessions.length ? `
+        <table>
+          <thead><tr><th>מעסיק</th><th>תאריך</th><th>שעות</th><th>שכר גולמי</th><th>עמלה</th><th>נטו</th></tr></thead>
+          <tbody>
+            ${sessions.map(s => `
+              <tr>
+                <td style="font-weight:600">${s.employer?.businessName||'—'}</td>
+                <td style="color:var(--muted);font-size:0.82rem">${fmtDate(s.date)}</td>
+                <td style="font-weight:700">${s.totalHours}h</td>
+                <td>₪${fmt(s.grossPay)}</td>
+                <td style="color:#e94560">-₪${fmt(s.workerFee)}</td>
+                <td style="color:var(--accent);font-weight:800">₪${fmt(s.netWorkerPay)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<div class="empty-state"><div class="empty-icon">💰</div><p>אין תשלומים מאושרים עדיין</p></div>';
+    } catch(e) {
+      document.getElementById('earningsSummary').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>';
+    }
+  }
+
+  // ── HISTORY ──
+  async function loadHistory() {
+    document.getElementById('historyTable').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const res = await fetch(`${API}/api/sessions/my`, { headers: headers() });
+      const data = res.ok ? await res.json() : { sessions:[] };
+      const sessions = data.sessions || [];
+
+      document.getElementById('historyTable').innerHTML = sessions.length ? `
+        <table>
+          <thead><tr><th>מעסיק</th><th>תאריך</th><th>שעות</th><th>שכר נטו</th><th>סטטוס</th></tr></thead>
+          <tbody>
+            ${sessions.map(s => `
+              <tr>
+                <td style="font-weight:600">${s.employer?.businessName||'—'}</td>
+                <td style="color:var(--muted);font-size:0.82rem">${fmtDate(s.date)}</td>
+                <td style="font-weight:700">${s.totalHours}h</td>
+                <td style="color:var(--accent);font-weight:700">₪${fmt(s.netWorkerPay)}</td>
+                <td><span class="badge badge-${s.status}">${s.status==='approved'?'מאושר ✓':s.status==='pending_approval'?'ממתין ⏳':s.status==='disputed'?'מחלוקת ⚠️':'פעיל 🟢'}</span></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<div class="empty-state"><div class="empty-icon">📋</div><p>אין היסטוריה עדיין</p></div>';
+    } catch(e) {
+      document.getElementById('historyTable').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>';
+    }
+  }
+
+  function logout() { localStorage.clear(); window.location='/pages/login.html'; }
+
+  loadOverview();
+</script>
+</body>
+</html>
