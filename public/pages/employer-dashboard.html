@@ -2,8 +2,9 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
+  <meta name="apple-mobile-web-app-title" content="שעתי">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>דשבורד מעסיק — WorkHour</title>
+  <title>דשבורד מעסיק — שעתי</title>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -13,7 +14,7 @@
       --surface: #ffffff;
       --surface2: #f0ede8;
       --border: rgba(0,0,0,0.08);
-      --accent: #c8502a;
+      --accent: #E05A2B;
       --accent2: #2a6e4e;
       --text: #1a1612;
       --muted: #8a8480;
@@ -154,7 +155,7 @@
     }
 
     .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: #a83e1e; transform: translateY(-1px); }
+    .btn-primary:hover { background: #C44820; transform: translateY(-1px); }
     .btn-secondary { background: var(--surface2); color: var(--text); }
     .btn-secondary:hover { background: #e5e0d8; }
 
@@ -656,7 +657,7 @@
 <!-- SIDEBAR -->
 
 <div class="mobile-topbar" style="background:var(--text);border-bottom:1px solid rgba(255,255,255,0.1)">
-  <div class="mobile-logo" style="color:#fff">Work<span style="color:var(--accent)">Hour</span></div>
+  <div class="mobile-logo" style="color:#fff">שע<span style="color:var(--accent)">תי</span></div>
   <div class="mobile-page-title" id="mobilePageTitle" style="color:#fff">סקירה כללית</div>
   <button id="mPostJobBtn" onclick="openPostJob()" style="display:none;padding:8px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:Heebo,sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer">+ משרה</button>
   <div class="mobile-avatar" id="mobileAvatar" onclick="navigate('profile')" style="background:var(--accent);color:#fff">מ</div>
@@ -664,7 +665,7 @@
 
 <aside class="sidebar">
   <div class="sidebar-logo">
-    <div class="logo-text">Work<span>Hour</span></div>
+    <div class="logo-text">שע<span>תי</span></div>
     <div class="logo-sub">פאנל מעסיק</div>
   </div>
 
@@ -769,7 +770,7 @@
         <div style="padding:24px;max-width:500px">
           <div style="background:var(--surface2);border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid var(--border)">
             <div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;font-weight:600">פרטי חשבון בנק</div>
-            <div style="font-size:1rem;font-weight:700;margin-bottom:4px">WorkHour בע"מ</div>
+            <div style="font-size:1rem;font-weight:700;margin-bottom:4px">שעתי בע"מ</div>
             <div style="font-size:0.9rem;color:var(--muted)">בנק הפועלים · סניף 508 · חשבון 123456</div>
             <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
             <div style="font-size:0.82rem;color:var(--muted)">יש לציין בהעברה: מס' חשבון + שם העסק</div>
@@ -1324,14 +1325,18 @@
 
   // ── PROFILE ──
   async function loadProfile() {
+    const cached = JSON.parse(localStorage.getItem('user') || '{}');
+    const fill = u => {
+      if(document.getElementById('pBusinessName')) document.getElementById('pBusinessName').value = u.businessName||u.name||'';
+      if(document.getElementById('pPhone')) document.getElementById('pPhone').value = u.phone||'';
+      if(document.getElementById('pArea')) document.getElementById('pArea').value = u.area||'';
+      if(document.getElementById('pAddress')) document.getElementById('pAddress').value = u.address||'';
+      if(document.getElementById('pAbout')) document.getElementById('pAbout').value = u.about||'';
+    };
+    fill(cached);
     try {
       const res = await fetch(`${API}/api/auth/me`, { headers: headers() });
-      const u = res.ok ? await res.json() : user;
-      document.getElementById('pBusinessName').value = u.businessName || '';
-      document.getElementById('pPhone').value = u.phone || '';
-      document.getElementById('pArea').value = u.area || '';
-      document.getElementById('pAddress').value = u.address || '';
-      document.getElementById('pAbout').value = u.about || '';
+      if(res.ok){ const u=await res.json(); fill(u); localStorage.setItem('user',JSON.stringify({...cached,...u})); }
     } catch(e) {}
   }
 
@@ -1455,7 +1460,7 @@
   .chat-overlay.open { display:flex; }
   .chat-box { width:380px; height:520px; background:#111827; border:1px solid rgba(255,255,255,0.1); border-radius:20px; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden; }
   .chat-header { padding:16px 20px; background:#0d1520; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:12px; }
-  .chat-avatar { width:38px; height:38px; border-radius:50%; background:#c8502a; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:0.95rem; color:#fff; flex-shrink:0; }
+  .chat-avatar { width:38px; height:38px; border-radius:50%; background:#E05A2B; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:0.95rem; color:#fff; flex-shrink:0; }
   .chat-name { font-weight:700; font-size:0.95rem; color:#f0ede8; }
   .chat-job { font-size:0.75rem; color:rgba(240,237,232,0.4); margin-top:2px; }
   .chat-close { margin-right:auto; background:none; border:none; color:rgba(240,237,232,0.4); font-size:1.2rem; cursor:pointer; transition:color 0.2s; }
@@ -1468,23 +1473,23 @@
   .msg.mine { align-self:flex-start; }
   .msg.theirs { align-self:flex-end; }
   .msg-bubble { padding:10px 14px; border-radius:16px; font-size:0.88rem; line-height:1.4; }
-  .msg.mine .msg-bubble { background:#c8502a; color:#fff; border-bottom-right-radius:4px; }
+  .msg.mine .msg-bubble { background:#E05A2B; color:#fff; border-bottom-right-radius:4px; }
   .msg.theirs .msg-bubble { background:#1e3a5f; color:#f0ede8; border-bottom-left-radius:4px; }
   .msg-time { font-size:0.68rem; color:rgba(240,237,232,0.3); margin-top:4px; padding:0 4px; }
   .msg.mine .msg-time { text-align:right; }
   .chat-input-row { padding:14px 16px; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:8px; align-items:flex-end; background:#0d1520; }
   .chat-input { flex:1; background:#1c2b3a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:10px 14px; color:#f0ede8; font-family:'Heebo',sans-serif; font-size:0.9rem; outline:none; resize:none; max-height:100px; min-height:40px; transition:border-color 0.2s; }
-  .chat-input:focus { border-color:#c8502a; }
+  .chat-input:focus { border-color:#E05A2B; }
   .chat-input::placeholder { color:rgba(240,237,232,0.35); }
-  .chat-send { width:40px; height:40px; border-radius:12px; background:#c8502a; border:none; color:#fff; font-size:1.1rem; cursor:pointer; transition:all 0.2s; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-  .chat-send:hover { background:#a83e1e; transform:scale(1.05); }
+  .chat-send { width:40px; height:40px; border-radius:12px; background:#E05A2B; border:none; color:#fff; font-size:1.1rem; cursor:pointer; transition:all 0.2s; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .chat-send:hover { background:#C44820; transform:scale(1.05); }
   .chat-empty { text-align:center; color:rgba(240,237,232,0.3); font-size:0.85rem; margin:auto; }
   .chat-loading { text-align:center; padding:20px; color:rgba(240,237,232,0.3); }
   
   /* כפתור פתיחת צ'אט במועמד */
-  .btn-chat { border:1px solid rgba(0,200,150,0.3); color:#00c896; background:rgba(0,200,150,0.08); padding:7px 14px; border-radius:8px; font-family:'Heebo',sans-serif; font-size:0.8rem; font-weight:700; cursor:pointer; transition:all 0.15s; }
+  .btn-chat { border:1px solid rgba(0,200,150,0.3); color:#E05A2B; background:rgba(0,200,150,0.08); padding:7px 14px; border-radius:8px; font-family:'Heebo',sans-serif; font-size:0.8rem; font-weight:700; cursor:pointer; transition:all 0.15s; }
   .btn-chat:hover { background:rgba(0,200,150,0.15); }
-  .chat-unread { display:inline-block; background:#00c896; color:#000; border-radius:50%; width:18px; height:18px; font-size:0.65rem; font-weight:900; text-align:center; line-height:18px; margin-right:4px; }
+  .chat-unread { display:inline-block; background:#E05A2B; color:#000; border-radius:50%; width:18px; height:18px; font-size:0.65rem; font-weight:900; text-align:center; line-height:18px; margin-right:4px; }
 </style>
 
 <!-- תיבת הצ'אט -->
@@ -1595,7 +1600,7 @@
     const text = input.value.trim();
     if (!text || !currentChatId) return;
     if (PHONE_PATTERN.test(text)) {
-      if (!confirm('⚠️ נראה שאתה מנסה לשתף מספר טלפון או ליצור קשר מחוץ לאפליקציה.\n\nכל העסקאות חייבות להתבצע דרך WorkHour בלבד.\n\nלחץ אישור רק אם ההודעה לא קשורה לזה.')) return;
+      if (!confirm('⚠️ נראה שאתה מנסה לשתף מספר טלפון או ליצור קשר מחוץ לאפליקציה.\n\nכל העסקאות חייבות להתבצע דרך שעתי בלבד.\n\nלחץ אישור רק אם ההודעה לא קשורה לזה.')) return;
     }
     input.value = '';
     input.style.height = 'auto';
@@ -1658,6 +1663,9 @@
     </div>
     <div class="bottom-nav-item" onclick="navigate('profile')" data-section="profile" style="color:rgba(255,255,255,0.5)">
       <div class="bnav-icon">👤</div><div class="bnav-label" style="color:inherit">פרופיל</div>
+    </div>
+    <div class="bottom-nav-item" onclick="logout()" style="color:#E05A2B">
+      <div class="bnav-icon">🚪</div><div class="bnav-label" style="color:inherit">יציאה</div>
     </div>
   </div>
 </nav>

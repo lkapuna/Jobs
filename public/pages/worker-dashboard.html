@@ -2,17 +2,18 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
+  <meta name="apple-mobile-web-app-title" content="שעתי">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>WorkHour — עובד</title>
+  <title>שעתי — עובד</title>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
   <script src="/socket.io/socket.io.js"></script>
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     :root {
       --bg:#0f1923; --surface:#162030; --surface2:#1e2d40; --border:rgba(255,255,255,0.07);
-      --accent:#00c896; --accent2:#3b9eff; --red:#e05555; --text:#e8f0fe; --muted:rgba(232,240,254,0.45);
+      --accent:#E05A2B; --accent2:#FF8C5A; --red:#e05555; --text:#e8f0fe; --muted:rgba(232,240,254,0.45);
       --nav-h:64px; --top-h:56px; --safe-bottom:env(safe-area-inset-bottom,0px);
     }
     html, body { height:100%; overflow:hidden; }
@@ -23,7 +24,7 @@
     .logo { font-size:1.2rem; font-weight:900; color:#fff; }
     .logo span { color:var(--accent); }
     .page-title { font-size:1rem; font-weight:800; flex:1; text-align:center; }
-    .avatar-btn { width:34px; height:34px; border-radius:50%; background:var(--accent); border:none; color:#000; font-weight:900; font-size:0.85rem; cursor:pointer; flex-shrink:0; }
+    .avatar-btn { width:34px; height:34px; border-radius:50%; background:var(--accent); border:none; color:#fff; font-weight:900; font-size:0.85rem; cursor:pointer; flex-shrink:0; }
 
     /* SCROLL */
     .scroll-area { flex:1; overflow-y:auto; overflow-x:hidden; padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 16px); -webkit-overflow-scrolling:touch; }
@@ -36,7 +37,7 @@
     .bnav-item { flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 2px 8px; cursor:pointer; color:var(--muted); font-size:0.58rem; font-weight:700; gap:3px; border:none; background:none; position:relative; transition:color 0.2s; }
     .bnav-item.active { color:var(--accent); }
     .bnav-icon { font-size:1.35rem; line-height:1; }
-    .bnav-badge { position:absolute; top:6px; left:50%; transform:translateX(-50%) translateX(10px); background:var(--accent); color:#000; font-size:0.55rem; font-weight:900; min-width:16px; height:16px; border-radius:8px; padding:0 3px; display:flex; align-items:center; justify-content:center; }
+    .bnav-badge { position:absolute; top:6px; left:50%; transform:translateX(-50%) translateX(10px); background:var(--accent); color:#fff; font-size:0.55rem; font-weight:900; min-width:16px; height:16px; border-radius:8px; padding:0 3px; display:flex; align-items:center; justify-content:center; }
 
     /* CARDS */
     .stats-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
@@ -57,7 +58,7 @@
     .clock-date { font-size:0.85rem; color:var(--muted); margin-top:4px; }
     .clock-status { display:inline-flex; align-items:center; gap:6px; margin-top:12px; padding:6px 14px; border-radius:20px; font-size:0.8rem; font-weight:700; }
     .clock-status.idle { background:rgba(255,255,255,0.06); color:var(--muted); }
-    .clock-status.active { background:rgba(0,200,150,0.15); color:var(--accent); }
+    .clock-status.active { background:rgba(224,90,43,0.12); color:var(--accent); }
     .dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
     .dot.pulse { animation:pulse 1.5s infinite; }
     @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
@@ -70,7 +71,7 @@
     .job-rate { font-size:1.3rem; font-weight:900; color:var(--accent); margin-bottom:8px; }
     .job-tags { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; }
     .job-tag { font-size:0.72rem; color:var(--muted); background:var(--surface2); padding:3px 8px; border-radius:20px; }
-    .new-badge { font-size:0.65rem; font-weight:700; padding:2px 7px; border-radius:20px; background:rgba(0,200,150,0.15); color:var(--accent); }
+    .new-badge { font-size:0.65rem; font-weight:700; padding:2px 7px; border-radius:20px; background:rgba(224,90,43,0.12); color:var(--accent); }
 
     /* SEARCH */
     .search-box { position:relative; margin-bottom:10px; }
@@ -79,7 +80,7 @@
     .filter-row { display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
     .filter-row::-webkit-scrollbar { display:none; }
     .filter-chip { padding:7px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--muted); font-family:'Heebo',sans-serif; font-size:0.78rem; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0; transition:all 0.2s; }
-    .filter-chip.active { border-color:var(--accent); color:var(--accent); background:rgba(0,200,150,0.08); }
+    .filter-chip.active { border-color:var(--accent); color:var(--accent); background:rgba(224,90,43,0.08); }
 
     /* SESSION ROWS */
     .sess-row { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
@@ -113,7 +114,7 @@
     .btn-primary { background:var(--accent); color:#000; width:100%; padding:15px; font-size:1rem; border-radius:14px; font-size:0.95rem; }
     .btn-secondary { background:var(--surface2); color:var(--text); width:100%; padding:15px; font-size:0.95rem; border-radius:14px; border:1px solid var(--border); }
     .btn-sm { padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-family:'Heebo',sans-serif; font-size:0.75rem; font-weight:700; cursor:pointer; }
-    .btn-apply { width:100%; padding:12px; border-radius:10px; background:rgba(0,200,150,0.1); border:1px solid rgba(0,200,150,0.25); color:var(--accent); font-family:'Heebo',sans-serif; font-size:0.88rem; font-weight:700; cursor:pointer; margin-top:10px; }
+    .btn-apply { width:100%; padding:12px; border-radius:10px; background:rgba(224,90,43,0.1); border:1px solid rgba(224,90,43,0.25); color:var(--accent); font-family:'Heebo',sans-serif; font-size:0.88rem; font-weight:700; cursor:pointer; margin-top:10px; }
     .btn-apply:disabled { opacity:0.4; cursor:default; }
 
     /* FORMS */
@@ -140,8 +141,8 @@
     /* BADGES */
     .badge { display:inline-flex; align-items:center; padding:3px 9px; border-radius:20px; font-size:0.72rem; font-weight:700; }
     .badge-pending { background:rgba(255,255,255,0.07); color:var(--muted); }
-    .badge-interested { background:rgba(0,200,150,0.12); color:var(--accent); }
-    .badge-approved { background:rgba(0,200,150,0.12); color:var(--accent); }
+    .badge-interested { background:rgba(224,90,43,0.12); color:var(--accent); }
+    .badge-approved { background:rgba(224,90,43,0.12); color:var(--accent); }
     .badge-rejected { background:rgba(224,85,85,0.12); color:var(--red); }
     .badge-disputed { background:rgba(224,85,85,0.12); color:var(--red); }
 
@@ -166,7 +167,7 @@
     .chat-hdr-av { width:36px; height:36px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:900; color:#000; font-size:0.9rem; flex-shrink:0; }
     .chat-hdr-name { font-weight:700; font-size:0.9rem; color:#f0ede8; }
     .chat-hdr-sub { font-size:0.72rem; color:rgba(240,237,232,0.4); }
-    .chat-close { margin-right:auto; background:none; border:none; color:rgba(240,237,232,0.4); font-size:1.3rem; cursor:pointer; padding:4px; }
+    .chat-close { margin-right:auto; background:rgba(255,255,255,0.08); border:none; color:#fff; font-size:1.1rem; cursor:pointer; padding:0; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
     .chat-msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; -webkit-overflow-scrolling:touch; }
     .msg { max-width:78%; display:flex; flex-direction:column; }
     .msg.mine { align-self:flex-start; }
@@ -185,7 +186,7 @@
 <body>
 
 <div class="topbar">
-  <div class="logo">Work<span>Hour</span></div>
+  <div class="logo">שע<span>תי</span></div>
   <div class="page-title" id="pageTitle">סקירה כללית</div>
   <button class="avatar-btn" id="avatarBtn" onclick="navigate('profile')">ע</button>
 </div>
@@ -320,6 +321,7 @@
     <button class="bnav-item" onclick="navigate('earnings')" data-s="earnings"><div class="bnav-icon">💰</div><div>רווחים</div></button>
     <button class="bnav-item" onclick="navigate('messages')" data-s="messages"><div class="bnav-icon">💬</div><div>הודעות</div><div class="bnav-badge" id="msgBadge" style="display:none">0</div></button>
     <button class="bnav-item" onclick="navigate('profile')" data-s="profile"><div class="bnav-icon">👤</div><div>פרופיל</div></button>
+    <button class="bnav-item" onclick="logout()" style="color:#E05A2B"><div class="bnav-icon">🚪</div><div>יציאה</div></button>
   </div>
 </nav>
 
@@ -659,7 +661,7 @@ async function sendMsg() {
   const inp=document.getElementById('chatInput');
   const text=inp.value.trim();
   if(!text||!curChat) return;
-  if(PHONE.test(text)&&!confirm('⚠️ נראה שאתה מנסה לשתף טלפון.\nכל עסקאות חייבות להיות דרך WorkHour.\n\nלהמשיך?')) return;
+  if(PHONE.test(text)&&!confirm('⚠️ נראה שאתה מנסה לשתף טלפון.\nכל עסקאות חייבות להיות דרך שעתי.\n\nלהמשיך?')) return;
   inp.value=''; inp.style.height='auto';
   try {
     const r=await fetch(`/api/chat/${curChat}`,{method:'POST',headers:H(),body:JSON.stringify({text})});
