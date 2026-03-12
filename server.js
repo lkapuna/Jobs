@@ -25,11 +25,11 @@ mongoose.connect(process.env.MONGODB_URI)
         await User.create({
           role: 'admin',
           email: 'lkapuna@gmail.com',
-          password: 'L220984k', // גולמית — ה-model יצפין אוטומטית
-          phone: '0524332333',
+          password: 'Admin1234!', // גולמית — ה-model יצפין אוטומטית
+          phone: '0500000000',
           isActive: true
         });
-        console.log('✅ אדמין נוצר: lkapuna@gmail.com / L220984k');
+        console.log('✅ אדמין נוצר: lkapuna@gmail.com / Admin1234!');
       } else {
         console.log('✅ אדמין קיים במערכת');
       }
@@ -43,11 +43,23 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/chat', require('./routes/chat'));
 
 io.on('connection', (socket) => {
-  socket.on('join_chat', (chatId) => socket.join(chatId));
-  socket.on('send_message', ({ chatId, message, sender }) => {
-    io.to(chatId).emit('receive_message', { message, sender, time: new Date().toISOString() });
+  socket.on('join_chat', (chatId) => {
+    socket.join(chatId);
+  });
+  socket.on('leave_chat', (chatId) => {
+    socket.leave(chatId);
+  });
+  socket.on('send_message', ({ chatId, message, sender, time }) => {
+    // שלח לכולם בחדר חוץ מהשולח
+    socket.to(chatId).emit('receive_message', {
+      chatId,
+      text: message,
+      sender,
+      time: time || new Date().toISOString()
+    });
   });
 });
 
