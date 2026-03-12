@@ -436,26 +436,16 @@
 
   async function toggleClock() {
     if (!isWorking) {
-      // התחל עבודה — צריך employer ID
-      const employerId = prompt('הכנס מזהה מעסיק (employer ID):');
-      if (!employerId) return;
-      const hourlyRate = prompt('שכר לשעה (₪):');
-      if (!hourlyRate) return;
-
+      // טען משרות מאושרות לעובד
       try {
-        const res = await fetch(`${API}/api/sessions/start`, {
-          method:'POST', headers:headers(),
-          body:JSON.stringify({ employerId, hourlyRate:Number(hourlyRate) })
-        });
-        if (!res.ok) throw new Error((await res.json()).error);
-        const session = await res.json();
-        localStorage.setItem('activeSession', JSON.stringify(session));
-        isWorking = true;
-        clockStart = new Date(session.startTime);
-        startClockTick();
-        updateClockUI(true);
-        showToast('עבודה התחילה! ⏱️');
-      } catch(e) { showToast(e.message || 'שגיאה', 'error'); }
+        const res = await fetch(`${API}/api/jobs/my-approved`, { headers: headers() });
+        const jobs = res.ok ? await res.json() : [];
+        if (!jobs.length) {
+          showToast('אין לך משרות מאושרות להתחיל עבודה', 'error');
+          return;
+        }
+        openStartShiftModal(jobs);
+      } catch(e) { showToast('שגיאה בטעינת משרות', 'error'); }
     } else {
       // סיים עבודה
       try {
@@ -550,21 +540,19 @@
       const totalFees = sessions.reduce((s,x) => s+(x.workerFee||0), 0);
 
       document.getElementById('earningsSummary').innerHTML = `
-        <div class="earning-card"><h3>💰 סה"כ הרווחתי (נטו)</h3><div class="earning-big">₪${fmt(data.totalEarned)}</div><div class="earning-sub">אחרי עמלת האפליקציה</div></div>
-        <div class="earning-card"><h3>📊 עמלות ששולמו</h3><div class="earning-big" style="color:var(--accent2)">₪${fmt(totalFees)}</div><div class="earning-sub">3 ₪ לשעה לאפליקציה</div></div>
+        <div class="earning-card"><h3>💰 סה"כ הרווחתי</h3><div class="earning-big">₪${fmt(data.totalEarned)}</div><div class="earning-sub">${sessions.length} משמרות מאושרות</div></div>
+        <div class="earning-card"><h3>⏱️ סה"כ שעות</h3><div class="earning-big" style="color:var(--accent2)">${(data.totalHours||0).toFixed(1)}</div><div class="earning-sub">שעות עבודה</div></div>
       `;
 
       document.getElementById('earningsTable').innerHTML = sessions.length ? `
         <table>
-          <thead><tr><th>מעסיק</th><th>תאריך</th><th>שעות</th><th>שכר גולמי</th><th>עמלה</th><th>נטו</th></tr></thead>
+          <thead><tr><th>מעסיק</th><th>תאריך</th><th>שעות</th><th>שכר</th></tr></thead>
           <tbody>
             ${sessions.map(s => `
               <tr>
                 <td style="font-weight:600">${s.employer?.businessName||'—'}</td>
                 <td style="color:var(--muted);font-size:0.82rem">${fmtDate(s.date)}</td>
                 <td style="font-weight:700">${s.totalHours}h</td>
-                <td>₪${fmt(s.grossPay)}</td>
-                <td style="color:#e94560">-₪${fmt(s.workerFee)}</td>
                 <td style="color:var(--accent);font-weight:800">₪${fmt(s.netWorkerPay)}</td>
               </tr>
             `).join('')}
@@ -608,6 +596,56 @@
   function logout() { localStorage.clear(); window.location='/pages/login.html'; }
 
   loadOverview();
+</script>
+
+<!-- START SHIFT MODAL -->
+<div id="startShiftModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:460px">
+    <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:6px">▶ התחל משמרת</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:24px">בחר את המשרה שאתה הולך לעבוד בה</p>
+    <div id="shiftJobsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px"></div>
+    <button onclick="document.getElementById('startShiftModal').style.display='none'" style="width:100%;padding:12px;border-radius:10px;background:var(--surface2);border:none;color:var(--muted);font-family:Heebo,sans-serif;font-weight:700;cursor:pointer">ביטול</button>
+  </div>
+</div>
+
+<script>
+  function openStartShiftModal(jobs) {
+    const list = document.getElementById('shiftJobsList');
+    list.innerHTML = jobs.map(j => `
+      <div onclick="startShift('${j._id}', '${j.employer?._id}', ${j.hourlyRate}, '${j.title}', '${j.employer?.businessName||''}')"
+        style="padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all 0.2s"
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-weight:700;margin-bottom:4px">${j.title}</div>
+        <div style="font-size:0.82rem;color:var(--muted)">🏢 ${j.employer?.businessName||'—'} · ₪${j.hourlyRate} לשעה</div>
+      </div>
+    `).join('');
+    document.getElementById('startShiftModal').style.display = 'flex';
+  }
+
+  async function startShift(jobId, employerId, hourlyRate, title, business) {
+    document.getElementById('startShiftModal').style.display = 'none';
+    try {
+      const res = await fetch(`${API}/api/sessions/start`, {
+        method:'POST', headers:headers(),
+        body:JSON.stringify({ employerId, hourlyRate, jobId })
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      const session = await res.json();
+      localStorage.setItem('activeSession', JSON.stringify(session));
+      isWorking = true;
+      clockStart = new Date(session.startTime);
+      startClockTick();
+      updateClockUI(true);
+      document.getElementById('activeSessionInfo').innerHTML = `
+        <div style="padding:20px">
+          <div style="font-size:0.88rem;color:var(--muted);margin-bottom:4px">עובד ב:</div>
+          <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">${title} · ${business}</div>
+          <div style="font-size:0.88rem;color:var(--muted)">התחלת עבודה: <strong style="color:var(--text)">${new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</strong></div>
+        </div>
+      `;
+      showToast('עבודה התחילה! ⏱️');
+    } catch(e) { showToast(e.message || 'שגיאה', 'error'); }
+  }
 </script>
 </body>
 </html>
