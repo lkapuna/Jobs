@@ -152,6 +152,9 @@
     .toast.success { border-color:rgba(0,200,150,0.4); color:var(--accent); }
     .toast.error { border-color:rgba(233,69,96,0.4); color:#e94560; }
 
+    .filter-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; background:var(--surface); border:1px solid var(--border); border-radius:20px; cursor:pointer; font-size:0.82rem; transition:all 0.15s; }
+    .filter-chip:has(input:checked) { background:rgba(0,200,150,0.12); border-color:var(--accent); color:var(--accent); }
+    .filter-chip input { accent-color:var(--accent); width:12px; height:12px; }
     @media (max-width:768px) { .sidebar { display:none; } .main { margin-right:0; } .content { padding:20px 16px; } .stats-grid { grid-template-columns:1fr 1fr; } }
   </style>
 <script src="/socket.io/socket.io.js"></script>
@@ -172,13 +175,13 @@
     <div class="nav-item" onclick="navigate('messages')"><span class="icon">💬</span> הודעות <span class="nav-badge" id="msgBadge" style="display:none">0</span></div>
   </nav>
   <div class="sidebar-footer">
-    <div class="worker-chip">
+    <div class="worker-chip" style="cursor:pointer" onclick="openEditProfile()">
       <div class="w-avatar" id="wInitial">ע</div>
       <div>
         <div class="w-name" id="wName">טוען...</div>
-        <div class="w-role">עובד</div>
+        <div class="w-role" style="color:rgba(255,255,255,0.3)">✏️ ערוך פרטים</div>
       </div>
-      <button class="logout-btn" onclick="logout()">⏻</button>
+      <button class="logout-btn" onclick="event.stopPropagation();logout()">⏻</button>
     </div>
   </div>
 </aside>
@@ -223,21 +226,21 @@
     <!-- JOBS -->
     <div class="section" id="section-jobs">
       <div class="search-bar">
-        <input type="text" class="search-input" id="jobSearch" placeholder="🔍 חיפוש לפי שם משרה..." oninput="filterJobs()">
-        <select class="filter-select" id="areaFilter" onchange="filterJobs()">
-          <option value="">כל האזורים</option>
-          <option>תל אביב והמרכז</option>
-          <option>ירושלים</option>
-          <option>חיפה והצפון</option>
-          <option>באר שבע והדרום</option>
-          <option>השרון</option>
-          <option>שפלה</option>
-        </select>
-        <select class="filter-select" id="typeFilter" onchange="filterJobs()">
-          <option value="">כל הסוגים</option>
-          <option value="זמנית">זמנית</option>
-          <option value="קבועה">קבועה</option>
-        </select>
+        <input type="text" class="search-input" id="jobSearch" placeholder="🔍 חיפוש לפי שם משרה..." oninput="filterJobs()" style="flex:1;min-width:180px">
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
+        <span style="font-size:0.8rem;color:var(--muted);align-self:center;margin-left:6px">אזור:</span>
+        <label class="filter-chip"><input type="checkbox" value="תל אביב והמרכז" onchange="filterJobs()"> ת"א והמרכז</label>
+        <label class="filter-chip"><input type="checkbox" value="ירושלים" onchange="filterJobs()"> ירושלים</label>
+        <label class="filter-chip"><input type="checkbox" value="חיפה והצפון" onchange="filterJobs()"> חיפה והצפון</label>
+        <label class="filter-chip"><input type="checkbox" value="באר שבע והדרום" onchange="filterJobs()"> דרום</label>
+        <label class="filter-chip"><input type="checkbox" value="השרון" onchange="filterJobs()"> השרון</label>
+        <label class="filter-chip"><input type="checkbox" value="שפלה" onchange="filterJobs()"> שפלה</label>
+        <span style="font-size:0.8rem;color:var(--muted);align-self:center;margin-right:8px;margin-left:6px">סוג:</span>
+        <label class="filter-chip"><input type="checkbox" value="זמנית" onchange="filterJobs()"> זמנית</label>
+        <label class="filter-chip"><input type="checkbox" value="קבועה" onchange="filterJobs()"> קבועה</label>
+        <label class="filter-chip"><input type="checkbox" value="משמרות" onchange="filterJobs()"> משמרות</label>
+        <label class="filter-chip"><input type="checkbox" value="סופי שבוע" onchange="filterJobs()"> סופי שבוע</label>
       </div>
       <div class="jobs-grid" id="jobsGrid">
         <div class="loading"><div class="spinner"></div></div>
@@ -486,12 +489,12 @@
 
   function filterJobs() {
     const q = document.getElementById('jobSearch').value.toLowerCase();
-    const area = document.getElementById('areaFilter').value;
-    const type = document.getElementById('typeFilter').value;
+    const areas = [...document.querySelectorAll('.filter-chip input[type=checkbox]:checked')].map(c=>c.value).filter(v=>['תל אביב והמרכז','ירושלים','חיפה והצפון','באר שבע והדרום','השרון','שפלה'].includes(v));
+    const types = [...document.querySelectorAll('.filter-chip input[type=checkbox]:checked')].map(c=>c.value).filter(v=>['זמנית','קבועה','משמרות','סופי שבוע'].includes(v));
     const filtered = allJobs.filter(j => {
-      const matchQ = !q || j.title.toLowerCase().includes(q) || j.profession.toLowerCase().includes(q);
-      const matchArea = !area || j.area === area;
-      const matchType = !type || j.jobType === type;
+      const matchQ = !q || j.title.toLowerCase().includes(q) || (j.profession||'').toLowerCase().includes(q);
+      const matchArea = !areas.length || areas.some(a => (j.area||'').includes(a));
+      const matchType = !types.length || types.some(t => (j.jobType||'').includes(t));
       return matchQ && matchArea && matchType;
     });
     renderJobs(filtered);
@@ -875,6 +878,121 @@
   document.getElementById('chatOverlay').addEventListener('click', function(e) {
     if (e.target === this) closeChat();
   });
+</script>
+
+
+<!-- EDIT PROFILE MODAL -->
+<div id="editProfileModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+    <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:6px">✏️ ערוך את הפרופיל שלי</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:24px">הפרטים שלך גלויים למעסיקים</p>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">שם פרטי</label>
+      <input id="wp_firstName" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">שם משפחה</label>
+      <input id="wp_lastName" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">טלפון</label>
+      <input id="wp_phone" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">מקצוע</label>
+      <input id="wp_profession" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">תיאור קצר</label>
+      <textarea id="wp_description" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.88rem;outline:none;resize:vertical;min-height:70px"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="document.getElementById('editProfileModal').style.display='none'" style="padding:10px 22px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">ביטול</button>
+      <button onclick="saveProfile()" style="padding:10px 22px;border-radius:10px;background:var(--accent);border:none;color:#000;font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">שמור</button>
+    </div>
+  </div>
+</div>
+
+<!-- PHONE WARNING MODAL -->
+<div id="phoneWarningModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:600;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1a1a2e;border:2px solid #e94560;border-radius:20px;padding:36px;width:100%;max-width:420px;text-align:center">
+    <div style="font-size:3rem;margin-bottom:16px">⚠️</div>
+    <h3 style="font-size:1.2rem;font-weight:800;margin-bottom:10px;color:#e94560">שים לב!</h3>
+    <p style="color:rgba(255,255,255,0.7);font-size:0.92rem;line-height:1.6;margin-bottom:24px">
+      זיהינו ניסיון לשיתוף מידע ליצירת קשר מחוץ לאפליקציה.<br><br>
+      <strong style="color:#fff">כל העסקאות חייבות להתבצע דרך WorkHour בלבד.</strong><br>
+      עסקאות מחוץ לאפליקציה עלולות להוביל לחסימת החשבון.
+    </p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button id="phoneWarnCancel" style="padding:10px 22px;border-radius:10px;background:rgba(255,255,255,0.1);border:none;color:#fff;font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">ביטול</button>
+      <button id="phoneWarnSend" style="padding:10px 22px;border-radius:10px;background:#e94560;border:none;color:#fff;font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">שלח בכל זאת</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openEditProfile() {
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    document.getElementById('wp_firstName').value = u.firstName || '';
+    document.getElementById('wp_lastName').value = u.lastName || '';
+    document.getElementById('wp_phone').value = u.phone || '';
+    document.getElementById('wp_profession').value = u.profession || '';
+    document.getElementById('wp_description').value = u.description || '';
+    document.getElementById('editProfileModal').style.display = 'flex';
+  }
+
+  async function saveProfile() {
+    try {
+      const res = await fetch('/api/auth/update-profile', {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify({
+          firstName: document.getElementById('wp_firstName').value,
+          lastName: document.getElementById('wp_lastName').value,
+          phone: document.getElementById('wp_phone').value,
+          profession: document.getElementById('wp_profession').value,
+          description: document.getElementById('wp_description').value,
+        })
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      localStorage.setItem('user', JSON.stringify(data.user));
+      document.getElementById('wName').textContent = data.user.firstName + ' ' + data.user.lastName;
+      document.getElementById('wInitial').textContent = data.user.firstName?.[0] || 'ע';
+      document.getElementById('editProfileModal').style.display = 'none';
+      showToast('הפרטים עודכנו ✓');
+    } catch(e) { showToast('שגיאה בעדכון', 'error'); }
+  }
+
+  // אזהרת טלפון בצ'אט - עוקף את sendMessage המקורי
+  const _origSendMessage = window.sendMessage;
+  const PHONE_PATTERNS = [/05\d[\s-]?\d{7}/, /\d{10}/, /מה.{0,5}טלפון/, /מה.{0,5}מספר/, /תן.{0,5}נייד/, /תשלח.{0,5}מספר/];
+  
+  let pendingMessageText = null;
+
+  window.sendMessage = async function() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    
+    const hasPhone = PHONE_PATTERNS.some(p => p.test(text));
+    if (hasPhone) {
+      pendingMessageText = text;
+      document.getElementById('phoneWarningModal').style.display = 'flex';
+      document.getElementById('phoneWarnCancel').onclick = () => {
+        document.getElementById('phoneWarningModal').style.display = 'none';
+        pendingMessageText = null;
+      };
+      document.getElementById('phoneWarnSend').onclick = async () => {
+        document.getElementById('phoneWarningModal').style.display = 'none';
+        if (_origSendMessage) await _origSendMessage();
+        else await _sendMessageDirect(text);
+        pendingMessageText = null;
+      };
+      return;
+    }
+    if (_origSendMessage) await _origSendMessage();
+  };
 </script>
 
 </body>

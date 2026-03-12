@@ -506,13 +506,13 @@
   </nav>
 
   <div class="sidebar-footer">
-    <div class="employer-chip">
+    <div class="employer-chip" style="cursor:pointer" onclick="openEditProfile()">
       <div class="emp-avatar" id="empInitial">מ</div>
       <div>
         <div class="emp-name" id="empName">טוען...</div>
-        <div class="emp-role">מעסיק</div>
+        <div class="emp-role" style="color:rgba(255,255,255,0.3)">✏️ ערוך פרטים</div>
       </div>
-      <button class="logout-btn" onclick="logout()">⏻</button>
+      <button class="logout-btn" onclick="event.stopPropagation();logout()">⏻</button>
     </div>
   </div>
 </aside>
@@ -625,11 +625,29 @@
           <input type="number" id="j_rate" placeholder="50" min="30" required>
         </div>
         <div class="form-group">
-          <label>סוג עבודה</label>
-          <select id="j_type">
-            <option value="זמנית">זמנית</option>
-            <option value="קבועה">קבועה</option>
+          <label>אזור *</label>
+          <select id="j_area" required>
+            <option value="">בחר אזור</option>
+            <option>תל אביב והמרכז</option>
+            <option>ירושלים</option>
+            <option>חיפה והצפון</option>
+            <option>באר שבע והדרום</option>
+            <option>השרון</option>
+            <option>שפלה</option>
           </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>סוג עבודה (ניתן לבחור כמה)</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding:6px 0" id="j_types">
+          <label style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:0.88rem;transition:all 0.15s">
+            <input type="checkbox" value="זמנית" style="accent-color:var(--accent)"> זמנית</label>
+          <label style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:0.88rem;transition:all 0.15s">
+            <input type="checkbox" value="קבועה" style="accent-color:var(--accent)"> קבועה</label>
+          <label style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:0.88rem;transition:all 0.15s">
+            <input type="checkbox" value="משמרות" style="accent-color:var(--accent)"> משמרות</label>
+          <label style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:0.88rem;transition:all 0.15s">
+            <input type="checkbox" value="סופי שבוע" style="accent-color:var(--accent)"> סופי שבוע</label>
         </div>
       </div>
       <div class="form-row">
@@ -1069,7 +1087,7 @@
   .msg-time { font-size:0.68rem; color:rgba(255,255,255,0.3); margin-top:4px; padding:0 4px; }
   .msg.mine .msg-time { text-align:right; }
   .chat-input-row { padding:14px 16px; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:8px; align-items:flex-end; }
-  .chat-input { flex:1; background:#0f3460; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 14px; color:#e8f0fe; font-family:'Heebo',sans-serif; font-size:0.9rem; outline:none; resize:none; max-height:100px; min-height:40px; transition:border-color 0.2s; }
+  .chat-input { flex:1; background:#1a2744; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 14px; color:#e8f0fe; font-family:'Heebo',sans-serif; font-size:0.9rem; outline:none; resize:none; max-height:100px; min-height:40px; transition:border-color 0.2s; }
   .chat-input:focus { border-color:#00c896; }
   .chat-input::placeholder { color:rgba(255,255,255,0.3); }
   .chat-send { width:40px; height:40px; border-radius:12px; background:#00c896; border:none; color:#000; font-size:1.1rem; cursor:pointer; transition:all 0.2s; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
@@ -1226,6 +1244,105 @@
   document.getElementById('chatOverlay').addEventListener('click', function(e) {
     if (e.target === this) closeChat();
   });
+</script>
+
+
+<!-- EDIT PROFILE MODAL -->
+<div id="editProfileModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+    <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:6px">✏️ עריכת פרטים</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:24px">עדכן את פרטי העסק שלך</p>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">שם העסק</label>
+      <input id="ep_businessName" style="width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">שם איש קשר</label>
+      <input id="ep_contactName" style="width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">טלפון</label>
+      <input id="ep_phone" style="width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">כתובת</label>
+      <input id="ep_address" style="width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:0.92rem;outline:none">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button onclick="document.getElementById('editProfileModal').style.display='none'" style="padding:10px 22px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">ביטול</button>
+      <button onclick="saveProfile()" style="padding:10px 22px;border-radius:10px;background:var(--accent);border:none;color:#fff;font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">שמור</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openEditProfile() {
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    document.getElementById('ep_businessName').value = u.businessName || '';
+    document.getElementById('ep_contactName').value = u.contactName || '';
+    document.getElementById('ep_phone').value = u.phone || '';
+    document.getElementById('ep_address').value = u.businessAddress || '';
+    document.getElementById('editProfileModal').style.display = 'flex';
+  }
+
+  async function saveProfile() {
+    try {
+      const res = await fetch('/api/auth/update-profile', {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify({
+          businessName: document.getElementById('ep_businessName').value,
+          contactName: document.getElementById('ep_contactName').value,
+          phone: document.getElementById('ep_phone').value,
+          businessAddress: document.getElementById('ep_address').value,
+        })
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      localStorage.setItem('user', JSON.stringify(data.user));
+      document.getElementById('empName').textContent = data.user.businessName || data.user.name;
+      document.getElementById('empInitial').textContent = (data.user.businessName || 'מ')[0];
+      document.getElementById('editProfileModal').style.display = 'none';
+      showToast('הפרטים עודכנו ✓');
+    } catch(e) { showToast('שגיאה בעדכון', 'error'); }
+  }
+</script>
+
+
+<!-- PHONE WARNING -->
+<div id="phoneWarningModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:600;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border:2px solid var(--accent);border-radius:20px;padding:36px;width:100%;max-width:420px;text-align:center">
+    <div style="font-size:3rem;margin-bottom:16px">⚠️</div>
+    <h3 style="font-size:1.2rem;font-weight:800;margin-bottom:10px;color:var(--accent)">שים לב!</h3>
+    <p style="color:#555;font-size:0.92rem;line-height:1.6;margin-bottom:24px">
+      זיהינו ניסיון לשיתוף פרטי קשר מחוץ לאפליקציה.<br><br>
+      <strong>כל העסקאות חייבות להתבצע דרך WorkHour בלבד.</strong>
+    </p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button id="epWarnCancel" style="padding:10px 22px;border-radius:10px;background:#f0ede8;border:none;color:#333;font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">ביטול</button>
+      <button id="epWarnSend" style="padding:10px 22px;border-radius:10px;background:var(--accent);border:none;color:#fff;font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">שלח בכל זאת</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PHONE_PATTERNS_E = [/05\d[\s-]?\d{7}/, /\d{10}/, /מה.{0,5}טלפון/, /מה.{0,5}מספר/, /תן.{0,5}נייד/];
+  const _origSendE = window.sendMessage;
+  window.sendMessage = async function() {
+    const input = document.getElementById('chatInput');
+    const text = input?.value?.trim();
+    if (!text) return;
+    if (PHONE_PATTERNS_E.some(p => p.test(text))) {
+      document.getElementById('phoneWarningModal').style.display = 'flex';
+      document.getElementById('epWarnCancel').onclick = () => { document.getElementById('phoneWarningModal').style.display = 'none'; };
+      document.getElementById('epWarnSend').onclick = async () => {
+        document.getElementById('phoneWarningModal').style.display = 'none';
+        if (_origSendE) await _origSendE();
+      };
+      return;
+    }
+    if (_origSendE) await _origSendE();
+  };
 </script>
 
 </body>
