@@ -2,437 +2,354 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>דשבורד עובד — WorkHour</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>WorkHour — עובד</title>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <script src="/socket.io/socket.io.js"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     :root {
-      --bg: #0f1923;
-      --surface: #162030;
-      --surface2: #1e2d40;
-      --border: rgba(255,255,255,0.07);
-      --accent: #00c896;
-      --accent2: #3b9eff;
-      --text: #e8f0fe;
-      --muted: rgba(232,240,254,0.45);
-      --sidebar-w: 240px;
+      --bg:#0f1923; --surface:#162030; --surface2:#1e2d40; --border:rgba(255,255,255,0.07);
+      --accent:#00c896; --accent2:#3b9eff; --red:#e05555; --text:#e8f0fe; --muted:rgba(232,240,254,0.45);
+      --nav-h:64px; --top-h:56px; --safe-bottom:env(safe-area-inset-bottom,0px);
     }
-    body { font-family:'Heebo',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+    html, body { height:100%; overflow:hidden; }
+    body { font-family:'Heebo',sans-serif; background:var(--bg); color:var(--text); display:flex; flex-direction:column; }
 
-    /* SIDEBAR */
-    .sidebar { width:var(--sidebar-w); background:var(--surface); border-left:1px solid var(--border); display:flex; flex-direction:column; position:fixed; right:0; top:0; height:100vh; z-index:50; }
-    .sidebar-logo { padding:28px 24px 20px; border-bottom:1px solid var(--border); }
-    .logo-text { font-size:1.5rem; font-weight:900; color:#fff; }
-    .logo-text span { color:var(--accent); }
-    .logo-sub { font-size:0.7rem; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; margin-top:3px; }
-    .sidebar-nav { flex:1; padding:16px 12px; }
-    .nav-item { display:flex; align-items:center; gap:10px; padding:11px 13px; border-radius:10px; color:var(--muted); font-size:0.92rem; font-weight:500; cursor:pointer; transition:all 0.18s; margin-bottom:3px; }
-    .nav-item:hover { background:var(--surface2); color:var(--text); }
-    .nav-item.active { background:rgba(0,200,150,0.12); color:var(--accent); }
-    .nav-item .icon { font-size:1.1rem; width:22px; text-align:center; }
-    .sidebar-footer { padding:16px 12px; border-top:1px solid var(--border); }
-    .worker-chip { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface2); border-radius:10px; }
-    .w-avatar { width:36px; height:36px; background:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:0.95rem; color:#000; flex-shrink:0; }
-    .w-name { font-size:0.88rem; font-weight:700; }
-    .w-role { font-size:0.72rem; color:var(--muted); }
-    .logout-btn { margin-right:auto; background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; transition:color 0.2s; }
-    .logout-btn:hover { color:var(--accent); }
+    /* TOP */
+    .topbar { height:var(--top-h); background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 16px; gap:12px; flex-shrink:0; }
+    .logo { font-size:1.2rem; font-weight:900; color:#fff; }
+    .logo span { color:var(--accent); }
+    .page-title { font-size:1rem; font-weight:800; flex:1; text-align:center; }
+    .avatar-btn { width:34px; height:34px; border-radius:50%; background:var(--accent); border:none; color:#000; font-weight:900; font-size:0.85rem; cursor:pointer; flex-shrink:0; }
 
-    /* MAIN */
-    .main { margin-right:var(--sidebar-w); flex:1; display:flex; flex-direction:column; }
-    .topbar { display:flex; align-items:center; justify-content:space-between; padding:20px 32px; background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:40; }
-    .page-title { font-size:1.25rem; font-weight:800; }
-    .page-sub { font-size:0.82rem; color:var(--muted); margin-top:2px; }
-    .content { padding:28px 32px; flex:1; }
-    .section { display:none; }
-    .section.active { display:block; }
+    /* SCROLL */
+    .scroll-area { flex:1; overflow-y:auto; overflow-x:hidden; padding-bottom:calc(var(--nav-h) + var(--safe-bottom) + 16px); -webkit-overflow-scrolling:touch; }
+    .page { display:none; padding:14px; }
+    .page.active { display:block; }
 
-    /* STATS */
-    .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:28px; }
-    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px 24px; transition:transform 0.2s; }
-    .stat-card:hover { transform:translateY(-2px); }
-    .stat-icon { font-size:1.6rem; margin-bottom:10px; }
-    .stat-val { font-size:2rem; font-weight:900; }
+    /* BOTTOM NAV */
+    .bottom-nav { position:fixed; bottom:0; left:0; right:0; z-index:100; background:var(--surface); border-top:1px solid var(--border); padding-bottom:var(--safe-bottom); }
+    .bnav-row { display:flex; }
+    .bnav-item { flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 2px 8px; cursor:pointer; color:var(--muted); font-size:0.58rem; font-weight:700; gap:3px; border:none; background:none; position:relative; transition:color 0.2s; }
+    .bnav-item.active { color:var(--accent); }
+    .bnav-icon { font-size:1.35rem; line-height:1; }
+    .bnav-badge { position:absolute; top:6px; left:50%; transform:translateX(-50%) translateX(10px); background:var(--accent); color:#000; font-size:0.55rem; font-weight:900; min-width:16px; height:16px; border-radius:8px; padding:0 3px; display:flex; align-items:center; justify-content:center; }
+
+    /* CARDS */
+    .stats-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+    .stat-card { background:var(--surface); border-radius:14px; padding:16px; border:1px solid var(--border); }
+    .stat-icon { font-size:1.4rem; margin-bottom:8px; }
+    .stat-val { font-size:1.8rem; font-weight:900; line-height:1; }
     .stat-val.green { color:var(--accent); }
     .stat-val.blue { color:var(--accent2); }
-    .stat-label { font-size:0.8rem; color:var(--muted); margin-top:5px; }
+    .stat-label { font-size:0.74rem; color:var(--muted); margin-top:4px; }
+
+    .card { background:var(--surface); border-radius:14px; border:1px solid var(--border); margin-bottom:12px; overflow:hidden; }
+    .card-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .card-title { font-size:0.95rem; font-weight:700; }
 
     /* CLOCK */
-    .clock-card { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:32px; text-align:center; margin-bottom:20px; }
-    .clock-status { font-size:0.85rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-bottom:16px; }
-    .clock-time { font-size:3.5rem; font-weight:900; font-variant-numeric:tabular-nums; margin-bottom:8px; }
-    .clock-time.working { color:var(--accent); }
-    .clock-date { color:var(--muted); font-size:0.9rem; margin-bottom:28px; }
-    .clock-btn { padding:16px 48px; border-radius:50px; border:none; font-family:'Heebo',sans-serif; font-size:1.1rem; font-weight:800; cursor:pointer; transition:all 0.2s; }
-    .clock-btn.start { background:var(--accent); color:#000; }
-    .clock-btn.start:hover { background:#00e0a8; transform:scale(1.02); }
-    .clock-btn.end { background:rgba(233,69,96,0.15); color:#e94560; border:2px solid rgba(233,69,96,0.3); }
-    .clock-btn.end:hover { background:rgba(233,69,96,0.25); }
-    .clock-meta { margin-top:16px; font-size:0.85rem; color:var(--muted); }
+    .clock-display { text-align:center; padding:28px 20px; }
+    .clock-time { font-size:3rem; font-weight:900; color:var(--accent); font-variant-numeric:tabular-nums; letter-spacing:-1px; }
+    .clock-date { font-size:0.85rem; color:var(--muted); margin-top:4px; }
+    .clock-status { display:inline-flex; align-items:center; gap:6px; margin-top:12px; padding:6px 14px; border-radius:20px; font-size:0.8rem; font-weight:700; }
+    .clock-status.idle { background:rgba(255,255,255,0.06); color:var(--muted); }
+    .clock-status.active { background:rgba(0,200,150,0.15); color:var(--accent); }
+    .dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
+    .dot.pulse { animation:pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+    .clock-actions { display:flex; gap:10px; margin-top:20px; }
 
-    /* JOBS */
-    .search-bar { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
-    .search-input { flex:1; min-width:200px; padding:11px 16px; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Heebo',sans-serif; font-size:0.92rem; outline:none; transition:border-color 0.2s; }
-    .search-input:focus { border-color:var(--accent); }
-    .search-input::placeholder { color:var(--muted); }
-    .filter-select { padding:11px 12px; background:var(--surface); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Heebo',sans-serif; font-size:0.88rem; outline:none; cursor:pointer; }
-    .filter-select option { background:var(--surface); }
+    /* JOB CARDS */
+    .job-card { background:var(--surface); border-radius:14px; border:1px solid var(--border); padding:16px; margin-bottom:10px; }
+    .job-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+    .job-title { font-size:0.95rem; font-weight:700; }
+    .job-rate { font-size:1.3rem; font-weight:900; color:var(--accent); margin-bottom:8px; }
+    .job-tags { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; }
+    .job-tag { font-size:0.72rem; color:var(--muted); background:var(--surface2); padding:3px 8px; border-radius:20px; }
+    .new-badge { font-size:0.65rem; font-weight:700; padding:2px 7px; border-radius:20px; background:rgba(0,200,150,0.15); color:var(--accent); }
 
-    .jobs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
-    .job-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px; transition:all 0.2s; }
-    .job-card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,200,150,0.1); }
-    .job-card-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
-    .job-title { font-size:1rem; font-weight:700; }
-    .job-type { font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:20px; background:rgba(59,158,255,0.12); color:var(--accent2); }
-    .job-business { font-size:0.85rem; color:var(--muted); margin-bottom:10px; }
-    .job-tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
-    .job-tag { font-size:0.76rem; color:var(--muted); background:var(--surface2); padding:3px 10px; border-radius:20px; }
-    .job-rate { font-size:1.4rem; font-weight:900; color:var(--accent); margin-bottom:14px; }
-    .job-rate span { font-size:0.8rem; font-weight:500; color:var(--muted); }
-    .job-desc { font-size:0.82rem; color:var(--muted); line-height:1.5; margin-bottom:16px; }
-    .apply-btn { width:100%; padding:11px; background:var(--accent); border:none; border-radius:10px; color:#000; font-family:'Heebo',sans-serif; font-size:0.92rem; font-weight:800; cursor:pointer; transition:all 0.2s; }
-    .apply-btn:hover { background:#00e0a8; }
-    .apply-btn.applied { background:var(--surface2); color:var(--muted); cursor:default; }
+    /* SEARCH */
+    .search-box { position:relative; margin-bottom:10px; }
+    .search-box input { padding-right:38px; }
+    .search-icon { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:0.9rem; pointer-events:none; }
+    .filter-row { display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
+    .filter-row::-webkit-scrollbar { display:none; }
+    .filter-chip { padding:7px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--muted); font-family:'Heebo',sans-serif; font-size:0.78rem; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0; transition:all 0.2s; }
+    .filter-chip.active { border-color:var(--accent); color:var(--accent); background:rgba(0,200,150,0.08); }
+
+    /* SESSION ROWS */
+    .sess-row { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+    .sess-row:last-child { border-bottom:none; }
+    .sess-emp { width:38px; height:38px; border-radius:10px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+    .sess-info { flex:1; min-width:0; }
+    .sess-name { font-weight:700; font-size:0.88rem; }
+    .sess-time { font-size:0.74rem; color:var(--muted); margin-top:2px; }
+    .sess-earn { text-align:left; }
+    .sess-hours { font-size:1rem; font-weight:800; color:var(--accent); }
+    .sess-pay { font-size:0.78rem; color:var(--muted); }
 
     /* EARNINGS */
-    .earnings-summary { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
-    .earning-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; }
-    .earning-card h3 { font-size:0.82rem; color:var(--muted); font-weight:600; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.06em; }
-    .earning-big { font-size:2.2rem; font-weight:900; color:var(--accent); }
-    .earning-sub { font-size:0.8rem; color:var(--muted); margin-top:5px; }
+    .earn-big { text-align:center; padding:24px; }
+    .earn-amount { font-size:2.8rem; font-weight:900; color:var(--accent); }
+    .earn-label { font-size:0.82rem; color:var(--muted); margin-top:4px; }
 
-    /* PANEL */
-    .panel { background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; margin-bottom:20px; }
-    .panel-header { display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid var(--border); }
-    .panel-title { font-size:1rem; font-weight:700; }
+    /* MESSAGES */
+    .chat-row { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; cursor:pointer; transition:background 0.15s; }
+    .chat-row:last-child { border-bottom:none; }
+    .chat-row:active { background:var(--surface2); }
+    .chat-av { width:42px; height:42px; border-radius:50%; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--accent); font-size:1rem; flex-shrink:0; }
+    .chat-info { flex:1; min-width:0; }
+    .chat-name { font-weight:700; font-size:0.9rem; }
+    .chat-preview { font-size:0.76rem; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .chat-time { font-size:0.7rem; color:var(--muted); flex-shrink:0; }
+    .unread-dot { width:10px; height:10px; border-radius:50%; background:var(--accent); flex-shrink:0; }
 
-    /* HISTORY TABLE */
-    table { width:100%; border-collapse:collapse; }
-    thead th { padding:12px 20px; text-align:right; font-size:0.75rem; font-weight:700; color:var(--muted); letter-spacing:0.06em; text-transform:uppercase; border-bottom:1px solid var(--border); background:var(--surface2); }
-    tbody tr { border-bottom:1px solid var(--border); transition:background 0.15s; }
-    tbody tr:hover { background:rgba(255,255,255,0.02); }
-    tbody tr:last-child { border-bottom:none; }
-    td { padding:14px 20px; font-size:0.88rem; vertical-align:middle; }
+    /* BUTTONS */
+    .btn { padding:9px 18px; border-radius:10px; border:none; font-family:'Heebo',sans-serif; font-size:0.85rem; font-weight:700; cursor:pointer; transition:all 0.2s; }
+    .btn-primary { background:var(--accent); color:#000; width:100%; padding:15px; font-size:1rem; border-radius:14px; font-size:0.95rem; }
+    .btn-secondary { background:var(--surface2); color:var(--text); width:100%; padding:15px; font-size:0.95rem; border-radius:14px; border:1px solid var(--border); }
+    .btn-sm { padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-family:'Heebo',sans-serif; font-size:0.75rem; font-weight:700; cursor:pointer; }
+    .btn-apply { width:100%; padding:12px; border-radius:10px; background:rgba(0,200,150,0.1); border:1px solid rgba(0,200,150,0.25); color:var(--accent); font-family:'Heebo',sans-serif; font-size:0.88rem; font-weight:700; cursor:pointer; margin-top:10px; }
+    .btn-apply:disabled { opacity:0.4; cursor:default; }
 
-    /* BADGES */
-    .badge { display:inline-flex; align-items:center; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; }
-    .badge-approved { background:rgba(0,200,150,0.12); color:var(--accent); }
-    .badge-pending { background:rgba(59,158,255,0.12); color:var(--accent2); }
-    .badge-disputed { background:rgba(233,69,96,0.12); color:#e94560; }
-    .badge-active { background:rgba(0,200,150,0.12); color:var(--accent); }
+    /* FORMS */
+    .form-group { margin-bottom:14px; }
+    .form-label { display:block; font-size:0.75rem; font-weight:700; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em; }
+    input, select, textarea { width:100%; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Heebo',sans-serif; font-size:0.92rem; outline:none; transition:border-color 0.2s; -webkit-appearance:none; }
+    input:focus, select:focus, textarea:focus { border-color:var(--accent); }
+    input::placeholder, textarea::placeholder { color:var(--muted); }
+    textarea { resize:vertical; min-height:80px; }
+    select option { background:var(--surface2); }
+
+    /* CHECKBOX GROUP */
+    .cb-group { display:flex; flex-wrap:wrap; gap:7px; padding:10px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; }
+    .cb-label { display:flex; align-items:center; gap:5px; padding:5px 10px; background:var(--surface); border:1px solid var(--border); border-radius:20px; cursor:pointer; font-size:0.78rem; transition:border-color 0.15s; }
+    .cb-label input { width:auto; padding:0; background:none; border:none; accent-color:var(--accent); }
 
     /* APPLY MODAL */
-    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:100; display:none; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; display:none; align-items:flex-end; }
     .modal-overlay.open { display:flex; }
-    .modal { background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:36px; width:100%; max-width:480px; }
-    .modal h3 { font-size:1.3rem; font-weight:800; margin-bottom:6px; }
-    .modal-sub { color:var(--muted); font-size:0.88rem; margin-bottom:24px; }
-    .form-group { margin-bottom:16px; }
-    label { display:block; font-size:0.82rem; font-weight:700; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em; }
-    textarea { width:100%; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:'Heebo',sans-serif; font-size:0.92rem; outline:none; resize:vertical; min-height:100px; transition:border-color 0.2s; }
-    textarea:focus { border-color:var(--accent); }
-    .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:8px; }
-    .btn { padding:10px 22px; border-radius:10px; font-family:'Heebo',sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; transition:all 0.2s; border:none; }
-    .btn-primary { background:var(--accent); color:#000; }
-    .btn-primary:hover { background:#00e0a8; }
-    .btn-secondary { background:var(--surface2); color:var(--text); }
-    .btn-secondary:hover { background:rgba(255,255,255,0.1); }
+    .modal-sheet { background:var(--surface); border-radius:20px 20px 0 0; width:100%; max-height:85vh; overflow-y:auto; padding:24px 16px; padding-bottom:calc(24px + var(--safe-bottom)); }
+    .modal-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 20px; }
+    .modal-title { font-size:1.15rem; font-weight:800; margin-bottom:16px; }
 
-    /* EMPTY + LOADING */
-    .empty-state { text-align:center; padding:50px 20px; color:var(--muted); }
-    .empty-icon { font-size:3rem; margin-bottom:12px; }
+    /* BADGES */
+    .badge { display:inline-flex; align-items:center; padding:3px 9px; border-radius:20px; font-size:0.72rem; font-weight:700; }
+    .badge-pending { background:rgba(255,255,255,0.07); color:var(--muted); }
+    .badge-interested { background:rgba(0,200,150,0.12); color:var(--accent); }
+    .badge-approved { background:rgba(0,200,150,0.12); color:var(--accent); }
+    .badge-rejected { background:rgba(224,85,85,0.12); color:var(--red); }
+    .badge-disputed { background:rgba(224,85,85,0.12); color:var(--red); }
+
+    /* EMPTY / LOADING */
+    .empty { text-align:center; padding:48px 20px; color:var(--muted); }
+    .empty-icon { font-size:2.8rem; margin-bottom:10px; }
     .loading { text-align:center; padding:40px; color:var(--muted); }
-    .spinner { width:28px; height:28px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 10px; }
+    .spinner { width:26px; height:26px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 10px; }
     @keyframes spin { to { transform:rotate(360deg); } }
 
     /* TOAST */
-    .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:12px 24px; border-radius:12px; font-size:0.9rem; font-weight:600; opacity:0; transition:all 0.3s; z-index:999; pointer-events:none; }
+    .toast { position:fixed; bottom:calc(var(--nav-h) + var(--safe-bottom) + 12px); left:50%; transform:translateX(-50%) translateY(10px); background:var(--surface); border:1px solid var(--border); color:var(--text); padding:11px 22px; border-radius:12px; font-size:0.88rem; font-weight:600; opacity:0; transition:all 0.3s; z-index:999; pointer-events:none; white-space:nowrap; }
     .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-    .toast.success { border-color:rgba(0,200,150,0.4); color:var(--accent); }
-    .toast.error { border-color:rgba(233,69,96,0.4); color:#e94560; }
+    .toast.ok { background:var(--accent); color:#000; border-color:transparent; }
+    .toast.err { background:var(--red); color:#fff; border-color:transparent; }
 
-    @media (max-width:768px) { .sidebar { display:none; } .main { margin-right:0; } .content { padding:20px 16px; } .stats-grid { grid-template-columns:1fr 1fr; } }
-    /* ══════════════════════════════
-       MOBILE-FIRST RESPONSIVE SYSTEM
-       ══════════════════════════════ */
-
-    /* Bottom nav - mobile only */
-    .bottom-nav {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      z-index: 100;
-      padding: 0;
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-    .bottom-nav-items {
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-    }
-    .bottom-nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 10px 4px 8px;
-      cursor: pointer;
-      color: var(--muted);
-      font-size: 0.65rem;
-      font-weight: 600;
-      gap: 3px;
-      transition: color 0.2s;
-      position: relative;
-      min-width: 0;
-    }
-    .bottom-nav-item.active { color: var(--accent); }
-    .bottom-nav-item .bnav-icon { font-size: 1.3rem; line-height: 1; }
-    .bottom-nav-item .bnav-label { font-size: 0.6rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 56px; text-align: center; }
-    .bottom-nav-item .bnav-badge {
-      position: absolute;
-      top: 6px;
-      right: 50%;
-      transform: translateX(8px);
-      background: var(--accent);
-      color: #000;
-      font-size: 0.55rem;
-      font-weight: 900;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Mobile topbar */
-    .mobile-topbar {
-      display: none;
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 16px;
-      align-items: center;
-      gap: 12px;
-    }
-    .mobile-logo { font-size: 1.2rem; font-weight: 900; color: #fff; }
-    .mobile-logo span { color: var(--accent); }
-    .mobile-page-title { font-size: 1rem; font-weight: 800; flex: 1; }
-    .mobile-avatar {
-      width: 34px; height: 34px;
-      border-radius: 50%;
-      background: var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 900; font-size: 0.85rem; color: #000;
-      flex-shrink: 0;
-      cursor: pointer;
-    }
-
-    @media (max-width: 768px) {
-      .sidebar { display: none !important; }
-      .topbar { display: none !important; }
-      .mobile-topbar { display: flex; }
-      .bottom-nav { display: block; }
-      .main { margin-right: 0 !important; padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
-      .content { padding: 16px 14px; }
-      .stats-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
-      .stat-card { padding: 14px 16px !important; }
-      .stat-val { font-size: 1.5rem !important; }
-      .jobs-grid { grid-template-columns: 1fr !important; }
-      .earnings-summary { grid-template-columns: 1fr 1fr !important; }
-      .panel { border-radius: 12px; }
-      .form-row { grid-template-columns: 1fr !important; }
-      table { font-size: 0.8rem; }
-      td, th { padding: 10px 12px !important; }
-      .chat-box { width: calc(100vw - 16px) !important; height: calc(100vh - 80px) !important; border-radius: 16px 16px 0 0 !important; }
-      .chat-overlay { align-items: flex-end !important; justify-content: center !important; padding: 0 8px !important; }
-      .search-bar { flex-direction: column; }
-      .search-bar > * { width: 100%; }
-      .modal { padding: 24px 16px !important; margin: 8px !important; max-height: 85vh !important; }
-    }
-
+    /* CHAT OVERLAY */
+    .chat-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:300; display:none; align-items:flex-end; }
+    .chat-overlay.open { display:flex; }
+    .chat-box { width:100%; height:92vh; background:#111827; border-radius:20px 20px 0 0; display:flex; flex-direction:column; overflow:hidden; }
+    .chat-hdr { padding:14px 16px; background:#0d1520; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:10px; }
+    .chat-hdr-av { width:36px; height:36px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:900; color:#000; font-size:0.9rem; flex-shrink:0; }
+    .chat-hdr-name { font-weight:700; font-size:0.9rem; color:#f0ede8; }
+    .chat-hdr-sub { font-size:0.72rem; color:rgba(240,237,232,0.4); }
+    .chat-close { margin-right:auto; background:none; border:none; color:rgba(240,237,232,0.4); font-size:1.3rem; cursor:pointer; padding:4px; }
+    .chat-msgs { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:8px; -webkit-overflow-scrolling:touch; }
+    .msg { max-width:78%; display:flex; flex-direction:column; }
+    .msg.mine { align-self:flex-start; }
+    .msg.theirs { align-self:flex-end; }
+    .msg-bubble { padding:9px 13px; border-radius:14px; font-size:0.86rem; line-height:1.4; word-break:break-word; }
+    .msg.mine .msg-bubble { background:var(--accent); color:#000; border-bottom-right-radius:3px; }
+    .msg.theirs .msg-bubble { background:#1e3a5f; color:#f0ede8; border-bottom-left-radius:3px; }
+    .msg-t { font-size:0.65rem; color:rgba(255,255,255,0.3); margin-top:3px; padding:0 3px; }
+    .chat-input-row { padding:10px 12px; background:#0d1520; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:8px; align-items:flex-end; padding-bottom:calc(10px + var(--safe-bottom)); }
+    .chat-input { flex:1; background:#1c2b3a; border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:10px 12px; color:#f0ede8; font-family:'Heebo',sans-serif; font-size:0.9rem; outline:none; resize:none; max-height:100px; }
+    .chat-input::placeholder { color:rgba(240,237,232,0.35); }
+    .chat-send { width:38px; height:38px; border-radius:10px; background:var(--accent); border:none; color:#000; font-size:1rem; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+    .chat-empty { text-align:center; color:rgba(255,255,255,0.3); font-size:0.84rem; margin:auto; }
   </style>
-<script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-
-<div class="mobile-topbar">
-  <div class="mobile-logo">Work<span>Hour</span></div>
-  <div class="mobile-page-title" id="mobilePageTitle">סקירה כללית</div>
-  <div class="mobile-avatar" id="mobileAvatar" onclick="navigate('profile')">ע</div>
+<div class="topbar">
+  <div class="logo">Work<span>Hour</span></div>
+  <div class="page-title" id="pageTitle">סקירה כללית</div>
+  <button class="avatar-btn" id="avatarBtn" onclick="navigate('profile')">ע</button>
 </div>
 
-<aside class="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-text">Work<span>Hour</span></div>
-    <div class="logo-sub">פאנל עובד</div>
-  </div>
-  <nav class="sidebar-nav">
-    <div class="nav-item active" onclick="navigate('overview')"><span class="icon">📊</span> סקירה כללית</div>
-    <div class="nav-item" onclick="navigate('clock')"><span class="icon">⏱️</span> שעון נוכחות</div>
-    <div class="nav-item" onclick="navigate('jobs')"><span class="icon">🔍</span> חיפוש עבודה</div>
-    <div class="nav-item" onclick="navigate('earnings')"><span class="icon">💰</span> הרווחים שלי</div>
-    <div class="nav-item" onclick="navigate('history')"><span class="icon">📋</span> היסטוריה</div>
-    <div class="nav-item" onclick="navigate('messages')"><span class="icon">💬</span> הודעות <span class="nav-badge" id="msgBadge" style="display:none">0</span></div>
-  </nav>
-  <div class="sidebar-footer">
-    <div class="worker-chip">
-      <div class="w-avatar" id="wInitial">ע</div>
-      <div>
-        <div class="w-name" id="wName">טוען...</div>
-        <div class="w-role">עובד</div>
-      </div>
-      <button class="logout-btn" onclick="logout()">⏻</button>
-    </div>
-  </div>
-</aside>
+<div class="scroll-area" id="scrollArea">
 
-<main class="main">
-  <div class="topbar">
-    <div>
-      <div class="page-title" id="pageTitle">סקירה כללית</div>
-      <div class="page-sub" id="pageSub">ברוך הבא לפאנל העובד</div>
-    </div>
-    <button class="btn btn-secondary" onclick="refreshCurrent()">↻ רענון</button>
-  </div>
-
-  <div class="content">
-
-    <!-- OVERVIEW -->
-    <div class="section active" id="section-overview">
-      <div class="stats-grid" id="statsGrid">
-        <div class="loading"><div class="spinner"></div></div>
-      </div>
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">משמרות אחרונות</span></div>
-        <div id="recentSessions"><div class="loading"><div class="spinner"></div></div></div>
+  <!-- OVERVIEW -->
+  <div class="page active" id="page-overview">
+    <div class="stats-row" id="statsGrid"><div class="loading"><div class="spinner"></div></div></div>
+    <div class="card" id="activeShiftCard" style="display:none">
+      <div class="card-header"><span class="card-title">⏱️ משמרת פעילה</span></div>
+      <div class="clock-display">
+        <div class="clock-time" id="miniClock">00:00:00</div>
+        <div class="clock-date" id="miniClockSub"></div>
+        <div class="clock-actions">
+          <button class="btn-secondary" onclick="navigate('clock')" style="flex:1;padding:12px">פרטים</button>
+          <button class="btn-primary" onclick="endShift()" style="flex:1;padding:12px">סיים משמרת</button>
+        </div>
       </div>
     </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">📋 היסטוריה אחרונה</span></div>
+      <div id="recentSessions"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
 
-    <!-- CLOCK -->
-    <div class="section" id="section-clock">
-      <div class="clock-card">
-        <div class="clock-status" id="clockStatus">לא בעבודה</div>
-        <div class="clock-time" id="clockDisplay">00:00:00</div>
+  <!-- CLOCK -->
+  <div class="page" id="page-clock">
+    <div class="card">
+      <div class="clock-display">
+        <div class="clock-time" id="clockTime">00:00:00</div>
         <div class="clock-date" id="clockDate"></div>
-        <button class="clock-btn start" id="clockBtn" onclick="toggleClock()">▶ התחל עבודה</button>
-        <div class="clock-meta" id="clockMeta"></div>
+        <div class="clock-status idle" id="clockStatus"><div class="dot"></div><span id="clockStatusTxt">לא פעיל</span></div>
       </div>
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">משמרת נוכחית</span></div>
-        <div id="activeSessionInfo" style="padding:24px;color:var(--muted);font-size:0.9rem">אין משמרת פעילה כרגע</div>
-      </div>
-    </div>
-
-    <!-- JOBS -->
-    <div class="section" id="section-jobs">
-      <div class="search-bar">
-        <input type="text" class="search-input" id="jobSearch" placeholder="🔍 חיפוש לפי שם משרה..." oninput="filterJobs()">
-        <select class="filter-select" id="areaFilter" onchange="filterJobs()">
-          <option value="">כל האזורים</option>
-          <option>תל אביב והמרכז</option>
-          <option>ירושלים</option>
-          <option>חיפה והצפון</option>
-          <option>באר שבע והדרום</option>
-          <option>השרון</option>
-          <option>שפלה</option>
-        </select>
-        <select class="filter-select" id="typeFilter" onchange="filterJobs()">
-          <option value="">כל הסוגים</option>
-          <option value="זמנית">זמנית</option>
-          <option value="קבועה">קבועה</option>
-        </select>
-      </div>
-      <div class="jobs-grid" id="jobsGrid">
-        <div class="loading"><div class="spinner"></div></div>
-      </div>
-    </div>
-
-    <!-- EARNINGS -->
-    <div class="section" id="section-earnings">
-      <div class="earnings-summary" id="earningsSummary">
-        <div class="loading"><div class="spinner"></div></div>
-      </div>
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">פירוט תשלומים</span></div>
-        <div id="earningsTable"><div class="loading"><div class="spinner"></div></div></div>
-      </div>
-    </div>
-
-    <!-- HISTORY -->
-    <div class="section" id="section-history">
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">היסטוריית משמרות</span>
-          <button onclick="downloadExcel()" style="padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.82rem;font-weight:700;cursor:pointer">📥 הורד Excel</button>
+      <div style="padding:0 16px 20px">
+        <div class="form-group" id="jobSelectGroup">
+          <label class="form-label">בחר משרה</label>
+          <select id="jobSelect"><option value="">טוען...</option></select>
         </div>
-        <div id="historyTable"><div class="loading"><div class="spinner"></div></div></div>
+        <button class="btn-primary" id="clockBtn" onclick="toggleShift()">▶ התחל משמרת</button>
       </div>
     </div>
-
   </div>
-</main>
 
-    <!-- PROFILE SECTION -->
-    <div class="section" id="section-profile">
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">עריכת הפרטים שלי</span></div>
-        <div style="padding:32px;max-width:560px">
-          <form id="profileForm">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-              <div><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">שם פרטי</label>
-              <input id="pFirstName" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none" type="text"></div>
-              <div><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">שם משפחה</label>
-              <input id="pLastName" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none" type="text"></div>
-            </div>
-            <div style="margin-bottom:16px"><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">טלפון</label>
-            <input id="pPhone" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none" type="tel"></div>
-            <div style="margin-bottom:16px"><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">מקצוע / תחום</label>
-            <input id="pProfession" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none" type="text"></div>
-            <div style="margin-bottom:16px"><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">אזורים מועדפים לעבודה</label>
-            <div id="pAreaCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px"></div></div>
-            <div style="margin-bottom:16px"><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">סוגי משרות מועדפים</label>
-            <div id="pTypeCheckboxes" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px"></div></div>
-            <div style="margin-bottom:24px"><label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">על עצמי</label>
-            <textarea id="pBio" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none;resize:vertical;min-height:80px" placeholder="ספר קצת על הניסיון שלך..."></textarea></div>
-            <div style="margin-bottom:24px">
-              <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">סיסמה חדשה (אופציונלי)</label>
-              <input id="pPassword" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none" type="password" placeholder="השאר ריק לא לשנות">
-            </div>
-            <button type="submit" style="padding:13px 32px;background:var(--accent);border:none;border-radius:10px;color:#000;font-family:Heebo,sans-serif;font-size:1rem;font-weight:800;cursor:pointer;transition:all 0.2s">שמור שינויים</button>
-          </form>
-        </div>
+  <!-- JOBS -->
+  <div class="page" id="page-jobs">
+    <div class="search-box"><span class="search-icon">🔍</span><input type="text" id="jobSearch" placeholder="חיפוש משרות..." oninput="filterJobs()"></div>
+    <div class="filter-row" id="areaFilters">
+      <button class="filter-chip active" onclick="setFilter('area','',this)">כל האזורים</button>
+      <button class="filter-chip" onclick="setFilter('area','תל אביב והמרכז',this)">ת״א</button>
+      <button class="filter-chip" onclick="setFilter('area','ירושלים',this)">ירושלים</button>
+      <button class="filter-chip" onclick="setFilter('area','חיפה והצפון',this)">חיפה</button>
+      <button class="filter-chip" onclick="setFilter('area','באר שבע והדרום',this)">ב״ש</button>
+      <button class="filter-chip" onclick="setFilter('area','השרון',this)">השרון</button>
+    </div>
+    <div class="filter-row" id="typeFilters">
+      <button class="filter-chip active" onclick="setFilter('type','',this)">כל הסוגים</button>
+      <button class="filter-chip" onclick="setFilter('type','משרה מלאה',this)">מלאה</button>
+      <button class="filter-chip" onclick="setFilter('type','משרה חלקית',this)">חלקית</button>
+      <button class="filter-chip" onclick="setFilter('type','זמנית',this)">זמנית</button>
+      <button class="filter-chip" onclick="setFilter('type','סטודנטים',this)">סטודנטים</button>
+      <button class="filter-chip" onclick="setFilter('type','סופי שבוע',this)">סופ״ש</button>
+    </div>
+    <div id="jobsList"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- EARNINGS -->
+  <div class="page" id="page-earnings">
+    <div class="earn-big">
+      <div class="earn-amount" id="totalEarn">₪0</div>
+      <div class="earn-label">סה״כ רווחים</div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-val blue" id="totalHours">0</div><div class="stat-label">שעות עבודה</div></div>
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-val" id="totalShifts">0</div><div class="stat-label">משמרות</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">היסטוריית משמרות</span>
+        <button class="btn-sm" onclick="downloadExcel()">📥 Excel</button>
+      </div>
+      <div id="earnHistory"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- MESSAGES -->
+  <div class="page" id="page-messages">
+    <div class="card">
+      <div id="chatList"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="page" id="page-profile">
+    <div class="card">
+      <div class="card-header"><span class="card-title">✏️ עריכת הפרטים שלי</span></div>
+      <div style="padding:16px">
+        <form id="profileForm">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group"><label class="form-label">שם פרטי</label><input id="pFirst" type="text"></div>
+            <div class="form-group"><label class="form-label">שם משפחה</label><input id="pLast" type="text"></div>
+          </div>
+          <div class="form-group"><label class="form-label">טלפון</label><input id="pPhone" type="tel"></div>
+          <div class="form-group"><label class="form-label">מקצוע / תחום</label><input id="pProf" type="text" placeholder="מכירות, שירות לקוחות..."></div>
+          <div class="form-group">
+            <label class="form-label">אזורים מועדפים</label>
+            <div class="cb-group" id="pAreas"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">סוגי משרות מועדפים</label>
+            <div class="cb-group" id="pTypes"></div>
+          </div>
+          <div class="form-group"><label class="form-label">על עצמי</label><textarea id="pBio" placeholder="ספר על הניסיון שלך..."></textarea></div>
+          <div class="form-group"><label class="form-label">סיסמה חדשה (אופציונלי)</label><input id="pPwd" type="password" placeholder="השאר ריק לא לשנות"></div>
+          <button type="submit" class="btn-primary">שמור שינויים</button>
+        </form>
       </div>
     </div>
-
-    <!-- MESSAGES SECTION -->
-    <div class="section" id="section-messages">
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">השיחות שלי</span></div>
-        <div id="chatsList"><div class="loading"><div class="spinner"></div></div></div>
-      </div>
+    <div style="margin-top:12px;padding:0">
+      <button onclick="logout()" style="width:100%;padding:14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Heebo',sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer">התנתק</button>
     </div>
+  </div>
+
+</div><!-- /scroll-area -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="bnav-row">
+    <button class="bnav-item active" onclick="navigate('overview')" data-s="overview"><div class="bnav-icon">📊</div><div>ראשי</div></button>
+    <button class="bnav-item" onclick="navigate('clock')" data-s="clock"><div class="bnav-icon">⏱️</div><div>שעון</div></button>
+    <button class="bnav-item" onclick="navigate('jobs')" data-s="jobs"><div class="bnav-icon">🔍</div><div>משרות</div></button>
+    <button class="bnav-item" onclick="navigate('earnings')" data-s="earnings"><div class="bnav-icon">💰</div><div>רווחים</div></button>
+    <button class="bnav-item" onclick="navigate('messages')" data-s="messages"><div class="bnav-icon">💬</div><div>הודעות</div><div class="bnav-badge" id="msgBadge" style="display:none">0</div></button>
+    <button class="bnav-item" onclick="navigate('profile')" data-s="profile"><div class="bnav-icon">👤</div><div>פרופיל</div></button>
+  </div>
+</nav>
 
 <!-- APPLY MODAL -->
 <div class="modal-overlay" id="applyModal">
-  <div class="modal">
-    <h3 id="applyJobTitle">פנייה למשרה</h3>
-    <p class="modal-sub">שלח הודעה קצרה למעסיק — הפרופיל שלך יצורף אוטומטית</p>
-    <div class="form-group">
-      <label>הודעה למעסיק (אופציונלי)</label>
-      <textarea id="applyMessage" placeholder="שלום, אני מעוניין/ת במשרה..."></textarea>
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="applyJobTitle">פנייה למשרה</div>
+    <div class="form-group"><label class="form-label">הודעה למעסיק (אופציונלי)</label><textarea id="applyMsg" placeholder="ספר קצת על עצמך..."></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button onclick="closeApply()" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer">ביטול</button>
+      <button onclick="submitApply()" class="btn-primary" style="flex:2">שלח פנייה</button>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeApply()">ביטול</button>
-      <button class="btn btn-primary" onclick="submitApply()">שלח פנייה</button>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div class="chat-overlay" id="chatOverlay">
+  <div class="chat-box">
+    <div class="chat-hdr">
+      <div class="chat-hdr-av" id="chatAv">?</div>
+      <div><div class="chat-hdr-name" id="chatName">שיחה</div><div class="chat-hdr-sub" id="chatSub"></div></div>
+      <button class="chat-close" onclick="closeChat()">✕</button>
+    </div>
+    <div class="chat-msgs" id="chatMsgs"><div class="chat-empty">טוען...</div></div>
+    <div class="chat-input-row">
+      <textarea class="chat-input" id="chatInput" placeholder="כתוב הודעה..." rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+      <button class="chat-send" onclick="sendMsg()">➤</button>
     </div>
   </div>
 </div>
@@ -440,739 +357,362 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const API = '';
-  const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  if (!token || user.role !== 'worker') window.location = '/pages/login.html';
+const API = '';
+const token = localStorage.getItem('token');
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token || user.role !== 'worker') window.location = '/pages/login.html';
 
-  document.getElementById('wName').textContent = user.name || 'עובד';
-  document.getElementById('wInitial').textContent = (user.name || 'ע')[0];
-  const mAvatar = document.getElementById('mobileAvatar');
-  if (mAvatar) mAvatar.textContent = (user.name || 'ע')[0];
+const H = () => ({ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` });
+const fmt = n => new Intl.NumberFormat('he-IL').format(Math.round(n||0));
+const fmtD = d => new Date(d).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit'});
+const fmtT = d => new Date(d).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
 
-  const headers = () => ({ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` });
-  const fmt = n => new Intl.NumberFormat('he-IL').format(Math.round(n||0));
-  const fmtDate = d => new Date(d).toLocaleDateString('he-IL', {day:'2-digit',month:'2-digit',year:'2-digit'});
-  const fmtTime = d => new Date(d).toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'});
+document.getElementById('avatarBtn').textContent = (user.name||'ע')[0];
 
-  let currentSection = 'overview';
-  let allJobs = [];
-  let currentJobId = null;
-  let clockInterval = null;
-  let clockStart = null;
-  let isWorking = false;
+let curSection = 'overview', allJobs = [], activeFilters = {area:'', type:''};
+let shiftActive = false, shiftStart = null, shiftTimer = null, curSessionId = null, curApplyJobId = null;
+let curChat = null, chatSock = null;
 
-  const pageMeta = {
-    overview: { title:'סקירה כללית', sub:'ברוך הבא לפאנל העובד' },
-    clock:    { title:'שעון נוכחות', sub:'עקוב אחרי שעות העבודה שלך' },
-    jobs:     { title:'חיפוש עבודה', sub:'מצא את המשרה המתאימה לך' },
-    earnings: { title:'הרווחים שלי', sub:'מעקב שכר ותשלומים' },
-    history:  { title:'היסטוריה', sub:'כל המשמרות שלך' },
-    profile:  { title:'הפרטים שלי', sub:'עריכת פרטים אישיים' },
-    messages: { title:'הודעות', sub:'שיחות עם מעסיקים' },
-  };
+const titles = { overview:'סקירה כללית', clock:'שעון נוכחות', jobs:'חיפוש משרות', earnings:'רווחים', messages:'הודעות', profile:'הפרטים שלי' };
+const AREAS = ['תל אביב והמרכז','ירושלים','חיפה והצפון','באר שבע והדרום','השרון','שפלה'];
+const TYPES = ['משרה מלאה','משרה חלקית','זמנית','קבועה','סטודנטים','סופי שבוע'];
 
-  function navigate(s) {
-    currentSection = s;
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll(`[onclick="navigate('${s}')"]`).forEach(el => el.classList.add('active'));
-    document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-    document.getElementById(`section-${s}`).classList.add('active');
-    document.getElementById('pageTitle').textContent = pageMeta[s].title;
-    document.getElementById('pageSub').textContent = pageMeta[s].sub;
-    // Mobile
-    const mTitle = document.getElementById('mobilePageTitle');
-    if (mTitle) mTitle.textContent = pageMeta[s].title;
-    document.querySelectorAll('.bottom-nav-item').forEach(el => {
-      el.classList.toggle('active', el.dataset.section === s);
-    });
-    loadSection(s);
-    window.scrollTo(0, 0);
+function navigate(s) {
+  curSection = s;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${s}`).classList.add('active');
+  document.querySelectorAll('.bnav-item').forEach(b => b.classList.toggle('active', b.dataset.s === s));
+  document.getElementById('pageTitle').textContent = titles[s];
+  document.getElementById('scrollArea').scrollTop = 0;
+  if (s==='overview') loadOverview();
+  else if (s==='clock') loadClock();
+  else if (s==='jobs') loadJobs();
+  else if (s==='earnings') loadEarnings();
+  else if (s==='messages') loadChats();
+  else if (s==='profile') loadProfile();
+}
+
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ── CLOCK ──
+function tickClock() {
+  const now = new Date();
+  document.getElementById('clockTime').textContent = now.toLocaleTimeString('he-IL');
+  document.getElementById('clockDate').textContent = now.toLocaleDateString('he-IL',{weekday:'long',day:'numeric',month:'long'});
+  if (shiftActive && shiftStart) {
+    const diff = Date.now() - shiftStart;
+    const h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000), s=Math.floor((diff%60000)/1000);
+    const str = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    const el = document.getElementById('clockTime');
+    if(el) el.textContent = str;
+    const mini = document.getElementById('miniClock');
+    if(mini) mini.textContent = str;
   }
+}
+setInterval(tickClock, 1000);
+tickClock();
 
-  function refreshCurrent() { loadSection(currentSection); }
+async function loadClock() {
+  try {
+    const r = await fetch(`${API}/api/jobs/my-approved`, {headers:H()});
+    const jobs = r.ok ? await r.json() : [];
+    const sel = document.getElementById('jobSelect');
+    sel.innerHTML = jobs.length ? '<option value="">בחר משרה...</option>' + jobs.map(j=>`<option value="${j._id}|${j.employerId||j.employer}">${j.title} — ${j.area}</option>`).join('') : '<option value="">אין משרות מאושרות</option>';
+  } catch(e) {}
+  updateClockUI();
+}
 
-  function loadSection(s) {
-    if (s==='overview') loadOverview();
-    else if (s==='clock') loadClock();
-    else if (s==='jobs') loadJobs();
-    else if (s==='earnings') loadEarnings();
-    else if (s==='history') loadHistory();
-    else if (s==='messages') loadChats();
-    else if (s==='profile') loadProfile();
+function updateClockUI() {
+  const btn = document.getElementById('clockBtn');
+  const status = document.getElementById('clockStatus');
+  const statusTxt = document.getElementById('clockStatusTxt');
+  const dot = status.querySelector('.dot');
+  if (shiftActive) {
+    btn.textContent = '⏹ סיים משמרת'; btn.className = 'btn-secondary';
+    status.className = 'clock-status active'; statusTxt.textContent = 'משמרת פעילה';
+    dot.className = 'dot pulse';
+    document.getElementById('jobSelectGroup').style.opacity = '0.4';
+    document.getElementById('jobSelectGroup').style.pointerEvents = 'none';
+    document.getElementById('activeShiftCard').style.display = '';
+  } else {
+    btn.textContent = '▶ התחל משמרת'; btn.className = 'btn-primary';
+    status.className = 'clock-status idle'; statusTxt.textContent = 'לא פעיל';
+    dot.className = 'dot';
+    document.getElementById('jobSelectGroup').style.opacity = '1';
+    document.getElementById('jobSelectGroup').style.pointerEvents = 'auto';
+    document.getElementById('activeShiftCard').style.display = 'none';
   }
+}
 
-  function showToast(msg, type='success') {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = `toast show ${type}`;
-    setTimeout(() => t.classList.remove('show'), 2800);
-  }
+async function toggleShift() {
+  if (shiftActive) { await endShift(); return; }
+  const val = document.getElementById('jobSelect').value;
+  if (!val) { toast('בחר משרה קודם','err'); return; }
+  const [jobId, employerId] = val.split('|');
+  try {
+    const r = await fetch(`${API}/api/sessions/start`,{method:'POST',headers:H(),body:JSON.stringify({jobId,employerId})});
+    if (!r.ok) throw new Error();
+    const s = await r.json();
+    curSessionId = s._id; shiftActive = true; shiftStart = Date.now();
+    const sub = document.getElementById('miniClockSub');
+    if(sub) sub.textContent = 'משמרת פעילה · ' + fmtT(new Date());
+    updateClockUI(); toast('משמרת התחילה ✓','ok');
+  } catch(e) { toast('שגיאה בהתחלת משמרת','err'); }
+}
 
-  // ── OVERVIEW ──
-  async function loadOverview() {
-    try {
-      const res = await fetch(`${API}/api/sessions/my`, { headers: headers() });
-      const data = res.ok ? await res.json() : { sessions:[], totalHours:0, totalEarned:0 };
-      const sessions = data.sessions || [];
+async function endShift() {
+  if (!curSessionId) return;
+  try {
+    const r = await fetch(`${API}/api/sessions/end`,{method:'POST',headers:H(),body:JSON.stringify({sessionId:curSessionId})});
+    if (!r.ok) throw new Error();
+    const s = await r.json();
+    shiftActive = false; shiftStart = null; curSessionId = null;
+    updateClockUI();
+    toast(`משמרת הסתיימה · ${s.totalHours}h · ₪${fmt(s.netWorkerPay)}`,'ok');
+    loadOverview();
+  } catch(e) { toast('שגיאה בסיום משמרת','err'); }
+}
 
-      document.getElementById('statsGrid').innerHTML = `
-        <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-val green">${(data.totalHours||0).toFixed(1)}</div><div class="stat-label">סה"כ שעות עבודה</div></div>
-        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val green">₪${fmt(data.totalEarned)}</div><div class="stat-label">סה"כ הרווחתי</div></div>
-        <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-val blue">${sessions.length}</div><div class="stat-label">משמרות שביצעתי</div></div>
-      `;
-
-      const recent = sessions.slice(0,5);
-      document.getElementById('recentSessions').innerHTML = recent.length ? `
-        <table>
-          <thead><tr><th>מעסיק</th><th>תאריך</th><th>שעות</th><th>שכר נטו</th><th>סטטוס</th></tr></thead>
-          <tbody>
-            ${recent.map(s => `
-              <tr>
-                <td style="font-weight:600">${s.employer?.businessName||'—'}</td>
-                <td style="color:var(--muted)">${fmtDate(s.date)}</td>
-                <td style="font-weight:700">${s.totalHours}h</td>
-                <td style="color:var(--accent);font-weight:700">₪${fmt(s.netWorkerPay)}</td>
-                <td><span class="badge badge-${s.status}">${s.status==='approved'?'מאושר ✓':s.status==='pending_approval'?'ממתין ⏳':s.status==='disputed'?'מחלוקת ⚠️':'פעיל'}</span></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      ` : '<div class="empty-state"><div class="empty-icon">⏱️</div><p>עדיין לא ביצעת משמרות</p></div>';
-    } catch(e) {
-      document.getElementById('statsGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>';
-    }
-  }
-
-  // ── CLOCK ──
-  function loadClock() {
-    updateClockDisplay();
-    const active = localStorage.getItem('activeSession');
-    if (active) {
-      const session = JSON.parse(active);
-      isWorking = true;
-      clockStart = new Date(session.startTime);
-      startClockTick();
-      updateClockUI(true);
-      document.getElementById('activeSessionInfo').innerHTML = `
-        <div style="padding:20px">
-          <div style="font-size:0.88rem;color:var(--muted);margin-bottom:8px">התחלת עבודה:</div>
-          <div style="font-size:1.1rem;font-weight:700">${fmtTime(session.startTime)}</div>
+// ── OVERVIEW ──
+async function loadOverview() {
+  try {
+    const r = await fetch(`${API}/api/sessions/my`,{headers:H()});
+    const d = r.ok ? await r.json() : {};
+    const sessions = d.sessions || [];
+    const approved = sessions.filter(s=>s.status==='approved');
+    const totalEarn = approved.reduce((s,x)=>s+(x.netWorkerPay||0),0);
+    const totalHrs = approved.reduce((s,x)=>s+(x.totalHours||0),0);
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val green">₪${fmt(totalEarn)}</div><div class="stat-label">סה"כ רווחים</div></div>
+      <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-val blue">${totalHrs.toFixed(1)}</div><div class="stat-label">שעות עבודה</div></div>
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-val">${sessions.length}</div><div class="stat-label">משמרות</div></div>
+      <div class="stat-card"><div class="stat-icon">${shiftActive?'🟢':'⚪'}</div><div class="stat-val" style="font-size:1rem">${shiftActive?'פעיל':'לא פעיל'}</div><div class="stat-label">סטטוס</div></div>
+    `;
+    const recent = sessions.slice(0,5);
+    document.getElementById('recentSessions').innerHTML = recent.length ? recent.map(s=>`
+      <div class="sess-row">
+        <div class="sess-emp">🏢</div>
+        <div class="sess-info">
+          <div class="sess-name">${s.employer?.businessName||'—'}</div>
+          <div class="sess-time">${fmtD(s.date)} · <span class="badge badge-${s.status}">${s.status==='approved'?'מאושר':s.status==='pending_approval'?'ממתין':'—'}</span></div>
         </div>
-      `;
-    }
-    setInterval(updateClockDisplay, 1000);
-  }
+        <div class="sess-earn">
+          <div class="sess-hours">${s.totalHours}h</div>
+          <div class="sess-pay">₪${fmt(s.netWorkerPay)}</div>
+        </div>
+      </div>`).join('') : '<div class="empty"><div class="empty-icon">📋</div><p>אין היסטוריה עדיין</p></div>';
+  } catch(e) {}
+}
 
-  function updateClockDisplay() {
-    const now = new Date();
-    document.getElementById('clockDate').textContent = now.toLocaleDateString('he-IL', { weekday:'long', day:'numeric', month:'long' });
-    if (!isWorking) {
-      document.getElementById('clockDisplay').textContent = now.toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    }
-  }
+// ── JOBS ──
+let areaFilter='', typeFilter='';
+async function loadJobs() {
+  document.getElementById('jobsList').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch(`${API}/api/jobs`,{headers:H()});
+    allJobs = r.ok ? await r.json() : [];
+    filterJobs();
+  } catch(e) {}
+}
 
-  function startClockTick() {
-    if (clockInterval) clearInterval(clockInterval);
-    clockInterval = setInterval(() => {
-      if (!clockStart) return;
-      const diff = Date.now() - clockStart.getTime();
-      const h = Math.floor(diff/3600000).toString().padStart(2,'0');
-      const m = Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
-      const s = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-      document.getElementById('clockDisplay').textContent = `${h}:${m}:${s}`;
-    }, 1000);
-  }
+function setFilter(kind, val, el) {
+  if (kind==='area') { areaFilter=val; document.querySelectorAll('#areaFilters .filter-chip').forEach(c=>c.classList.remove('active')); }
+  else { typeFilter=val; document.querySelectorAll('#typeFilters .filter-chip').forEach(c=>c.classList.remove('active')); }
+  el.classList.add('active');
+  filterJobs();
+}
 
-  function updateClockUI(working) {
-    const btn = document.getElementById('clockBtn');
-    const status = document.getElementById('clockStatus');
-    const display = document.getElementById('clockDisplay');
-    if (working) {
-      btn.textContent = '■ סיים עבודה';
-      btn.className = 'clock-btn end';
-      status.textContent = '● בעבודה עכשיו';
-      status.style.color = 'var(--accent)';
-      display.classList.add('working');
-    } else {
-      btn.textContent = '▶ התחל עבודה';
-      btn.className = 'clock-btn start';
-      status.textContent = 'לא בעבודה';
-      status.style.color = 'var(--muted)';
-      display.classList.remove('working');
-      if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
-    }
-  }
-
-  async function toggleClock() {
-    if (!isWorking) {
-      // טען משרות מאושרות לעובד
-      try {
-        const res = await fetch(`${API}/api/jobs/my-approved`, { headers: headers() });
-        const jobs = res.ok ? await res.json() : [];
-        if (!jobs.length) {
-          showToast('אין לך משרות מאושרות להתחיל עבודה', 'error');
-          return;
-        }
-        openStartShiftModal(jobs);
-      } catch(e) { showToast('שגיאה בטעינת משרות', 'error'); }
-    } else {
-      // סיים עבודה
-      try {
-        const res = await fetch(`${API}/api/sessions/end`, { method:'POST', headers:headers() });
-        if (!res.ok) throw new Error((await res.json()).error);
-        const data = await res.json();
-        localStorage.removeItem('activeSession');
-        isWorking = false;
-        clockStart = null;
-        updateClockUI(false);
-        showToast(`עבודה הסתיימה! ${data.summary.totalHours}h · ₪${fmt(data.summary.netPay)} נטו ✓`);
-        document.getElementById('activeSessionInfo').textContent = 'אין משמרת פעילה כרגע';
-      } catch(e) { showToast(e.message || 'שגיאה', 'error'); }
-    }
-  }
-
-  // ── JOBS ──
-  async function loadJobs() {
-    document.getElementById('jobsGrid').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    try {
-      const res = await fetch(`${API}/api/jobs`, { headers: headers() });
-      allJobs = res.ok ? await res.json() : [];
-      renderJobs(allJobs);
-    } catch(e) { document.getElementById('jobsGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>'; }
-  }
-
-  function toggleDropdown(id) {
-    const dd = document.getElementById(id);
-    document.querySelectorAll('[id$="DD"]').forEach(d => { if(d.id!==id) d.style.display='none'; });
-    dd.style.display = dd.style.display==='none' ? 'block' : 'none';
-  }
-  document.addEventListener('click', e => {
-    if (!e.target.closest('[id$="DD"]') && !e.target.closest('button[onclick*="DD"]')) {
-      document.querySelectorAll('[id$="DD"]').forEach(d => d.style.display='none');
-    }
+function filterJobs() {
+  const q = (document.getElementById('jobSearch').value||'').toLowerCase();
+  const filtered = allJobs.filter(j => {
+    const mq = !q || (j.title||'').toLowerCase().includes(q) || (j.profession||'').toLowerCase().includes(q);
+    const ma = !areaFilter || j.area===areaFilter;
+    const mt = !typeFilter || (j.jobType||'').includes(typeFilter);
+    return mq && ma && mt;
   });
-  function updateAreaLabel() {
-    const checked = [...document.querySelectorAll('#areaDD input:checked')].map(c=>c.value);
-    document.getElementById('areaBtnLabel').textContent = checked.length ? `📍 ${checked.length} אזורים` : '📍 כל האזורים';
-  }
-  function updateTypeLabel() {
-    const checked = [...document.querySelectorAll('#typeDD input:checked')].map(c=>c.value);
-    document.getElementById('typeBtnLabel').textContent = checked.length ? `📋 ${checked.length} סוגים` : '📋 כל הסוגים';
-  }
-  function filterJobs() {
-    const q = document.getElementById('jobSearch').value.toLowerCase();
-    const areas = [...document.querySelectorAll('#areaDD input:checked')].map(c=>c.value);
-    const types = [...document.querySelectorAll('#typeDD input:checked')].map(c=>c.value);
-    const filtered = allJobs.filter(j => {
-      const matchQ = !q || j.title.toLowerCase().includes(q) || (j.profession||'').toLowerCase().includes(q);
-      const matchArea = !areas.length || areas.includes(j.area);
-      const matchType = !types.length || types.includes(j.jobType);
-      return matchQ && matchArea && matchType;
-    });
-    renderJobs(filtered);
-  }
-
-  function renderJobs(jobs) {
-    document.getElementById('jobsGrid').innerHTML = jobs.length ? jobs.map(j => `
-      <div class="job-card">
-        <div class="job-card-top">
-          <div class="job-title">${j.title}</div>
-          <span class="job-type">${j.jobType}</span>
-        </div>
-        <div class="job-business">🏢 ${j.employer?.businessName||'—'}</div>
-        <div class="job-tags">
-          <span class="job-tag">📍 ${j.area}</span>
-          <span class="job-tag">🔧 ${j.profession}</span>
-          ${j.hours ? `<span class="job-tag">🕐 ${j.hours}</span>` : ''}
-        </div>
-        <div class="job-rate">₪${j.hourlyRate} <span>לשעה</span></div>
-        ${j.description ? `<div class="job-desc">${j.description.substring(0,100)}...</div>` : ''}
-        <button class="apply-btn" onclick="openApply('${j._id}', '${j.title}')">שלח פנייה</button>
+  document.getElementById('jobsList').innerHTML = filtered.length ? filtered.map(j=>`
+    <div class="job-card">
+      <div class="job-top"><div class="job-title">${j.title}</div><span class="new-badge">${j.profession||''}</span></div>
+      <div class="job-rate">₪${j.hourlyRate} <span style="font-size:0.78rem;font-weight:400;color:var(--muted)">לשעה</span></div>
+      <div class="job-tags">
+        <span class="job-tag">📍 ${j.area}</span>
+        ${j.jobType?`<span class="job-tag">📋 ${j.jobType}</span>`:''}
+        ${j.hours?`<span class="job-tag">🕐 ${j.hours}</span>`:''}
       </div>
-    `).join('') : '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🔍</div><p>לא נמצאו משרות</p></div>';
-  }
+      ${j.description?`<div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;line-height:1.5">${j.description.substring(0,100)}${j.description.length>100?'...':''}</div>`:''}
+      <button class="btn-apply" onclick="openApply('${j._id}')" ${j.myStatus?'disabled':''}>
+        ${j.myStatus==='pending'?'✓ פנייה נשלחה':j.myStatus==='interested'?'✓ מעוניין':j.myStatus?'הסטטוס: '+j.myStatus:'📨 שלח פנייה'}
+      </button>
+    </div>`).join('') : '<div class="empty"><div class="empty-icon">🔍</div><p>לא נמצאו משרות</p></div>';
+}
 
-  // ── APPLY ──
-  function openApply(jobId, title) {
-    currentJobId = jobId;
-    document.getElementById('applyJobTitle').textContent = `פנייה: ${title}`;
-    document.getElementById('applyModal').classList.add('open');
-  }
+function openApply(jobId) { curApplyJobId=jobId; document.getElementById('applyModal').classList.add('open'); document.getElementById('applyMsg').value=''; }
+function closeApply() { document.getElementById('applyModal').classList.remove('open'); curApplyJobId=null; }
+async function submitApply() {
+  if (!curApplyJobId) return;
+  try {
+    const r = await fetch(`${API}/api/jobs/${curApplyJobId}/apply`,{method:'POST',headers:H(),body:JSON.stringify({message:document.getElementById('applyMsg').value})});
+    if (!r.ok) throw new Error();
+    closeApply(); toast('הפנייה נשלחה ✓','ok'); loadJobs();
+  } catch(e) { toast('שגיאה בשליחה','err'); }
+}
 
-  function closeApply() {
-    document.getElementById('applyModal').classList.remove('open');
-    currentJobId = null;
-  }
+// ── EARNINGS ──
+async function loadEarnings() {
+  try {
+    const r = await fetch(`${API}/api/sessions/my`,{headers:H()});
+    const d = r.ok ? await r.json() : {};
+    const sessions = d.sessions || [];
+    const approved = sessions.filter(s=>s.status==='approved');
+    const total = approved.reduce((s,x)=>s+(x.netWorkerPay||0),0);
+    const hours = approved.reduce((s,x)=>s+(x.totalHours||0),0);
+    document.getElementById('totalEarn').textContent = `₪${fmt(total)}`;
+    document.getElementById('totalHours').textContent = hours.toFixed(1);
+    document.getElementById('totalShifts').textContent = approved.length;
+    document.getElementById('earnHistory').innerHTML = approved.length ? approved.map(s=>`
+      <div class="sess-row">
+        <div class="sess-emp">🏢</div>
+        <div class="sess-info">
+          <div class="sess-name">${s.employer?.businessName||'—'}</div>
+          <div class="sess-time">${fmtD(s.date)} · ${fmtT(s.startTime)}—${fmtT(s.endTime)}</div>
+        </div>
+        <div class="sess-earn"><div class="sess-hours">${s.totalHours}h</div><div style="color:var(--accent);font-weight:700;font-size:0.85rem">₪${fmt(s.netWorkerPay)}</div></div>
+      </div>`).join('') : '<div class="empty"><div class="empty-icon">💰</div><p>אין רווחים עדיין</p></div>';
+  } catch(e) {}
+}
 
-  async function submitApply() {
-    try {
-      const res = await fetch(`${API}/api/jobs/${currentJobId}/apply`, {
-        method:'POST', headers:headers(),
-        body:JSON.stringify({ message: document.getElementById('applyMessage').value })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      closeApply();
-      showToast('הפנייה נשלחה בהצלחה! 🎉');
-      document.getElementById('applyMessage').value = '';
-    } catch(e) { showToast(e.message || 'שגיאה', 'error'); }
-  }
+async function downloadExcel() {
+  try {
+    const r = await fetch(`${API}/api/sessions/my`,{headers:H()});
+    const d = r.ok ? await r.json() : {};
+    const sessions = d.sessions||[];
+    const rows=[['מעסיק','תאריך','שעת התחלה','שעת סיום','שעות','שכר נטו','סטטוס']];
+    sessions.forEach(s=>rows.push([s.employer?.businessName||'—',fmtD(s.date),fmtT(s.startTime),fmtT(s.endTime),s.totalHours,s.netWorkerPay,s.status==='approved'?'מאושר':'ממתין']));
+    const csv='\uFEFF'+rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+    a.download=`דוח_${user.name||'עובד'}_${new Date().toLocaleDateString('he-IL').replace(/\//g,'-')}.csv`; a.click();
+    toast('הורד ✓','ok');
+  } catch(e) { toast('שגיאה','err'); }
+}
 
-  // ── EARNINGS ──
-  async function loadEarnings() {
-    try {
-      const res = await fetch(`${API}/api/sessions/my`, { headers: headers() });
-      const data = res.ok ? await res.json() : { sessions:[], totalHours:0, totalEarned:0 };
-      const sessions = (data.sessions||[]).filter(s => s.status==='approved');
-      const totalFees = sessions.reduce((s,x) => s+(x.workerFee||0), 0);
+// ── CHATS ──
+async function loadChats() {
+  document.getElementById('chatList').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch(`${API}/api/jobs/my-approved`,{headers:H()});
+    const jobs = r.ok ? await r.json() : [];
+    document.getElementById('chatList').innerHTML = jobs.length ? jobs.map(j=>`
+      <div class="chat-row" onclick="openChat('${j._id}_${user._id||user.id}','${j.employerName||j.title}','${j.title}')">
+        <div class="chat-av">${(j.employerName||j.title||'?')[0]}</div>
+        <div class="chat-info"><div class="chat-name">${j.employerName||j.title}</div><div class="chat-preview">${j.area} · ${j.jobType||'זמנית'}</div></div>
+        <div class="chat-time">💬</div>
+      </div>`).join('') : '<div class="empty"><div class="empty-icon">💬</div><p>אין שיחות עדיין</p></div>';
+  } catch(e) {}
+}
 
-      document.getElementById('earningsSummary').innerHTML = `
-        <div class="earning-card"><h3>💰 סה"כ הרווחתי</h3><div class="earning-big">₪${fmt(data.totalEarned)}</div><div class="earning-sub">${sessions.length} משמרות מאושרות</div></div>
-        <div class="earning-card"><h3>⏱️ סה"כ שעות</h3><div class="earning-big" style="color:var(--accent2)">${(data.totalHours||0).toFixed(1)}</div><div class="earning-sub">שעות עבודה</div></div>
-      `;
+const PHONE=/(?:\d[\s\-.]?){9,}|מה.*?(?:טלפון|מספר|נייד)|(?:טלפון|מספר|נייד).*?שלך/i;
 
-      document.getElementById('earningsTable').innerHTML = sessions.length ? `
-        <table>
-          <thead><tr><th>מעסיק</th><th>תאריך</th><th>שעות</th><th>שכר</th></tr></thead>
-          <tbody>
-            ${sessions.map(s => `
-              <tr>
-                <td style="font-weight:600">${s.employer?.businessName||'—'}</td>
-                <td style="color:var(--muted);font-size:0.82rem">${fmtDate(s.date)}</td>
-                <td style="font-weight:700">${s.totalHours}h</td>
-                <td style="color:var(--accent);font-weight:800">₪${fmt(s.netWorkerPay)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      ` : '<div class="empty-state"><div class="empty-icon">💰</div><p>אין תשלומים מאושרים עדיין</p></div>';
-    } catch(e) {
-      document.getElementById('earningsSummary').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>';
-    }
-  }
+function openChat(chatId, name, job) {
+  curChat=chatId;
+  document.getElementById('chatAv').textContent=(name||'?')[0];
+  document.getElementById('chatName').textContent=name;
+  document.getElementById('chatSub').textContent=job||'';
+  document.getElementById('chatOverlay').classList.add('open');
+  loadChatMsgs();
+  if(!chatSock) chatSock=io();
+  chatSock.emit('join_chat',chatId);
+  chatSock.off('receive_message');
+  chatSock.on('receive_message',msg=>{ if(msg.chatId===chatId) appendMsg({text:msg.message,sender:msg.sender,time:msg.time},false); });
+}
+function closeChat() { document.getElementById('chatOverlay').classList.remove('open'); curChat=null; }
 
-  // ── HISTORY ──
-  async function loadHistory() {
-    document.getElementById('historyTable').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    try {
-      const res = await fetch(`${API}/api/sessions/my`, { headers: headers() });
-      const data = res.ok ? await res.json() : { sessions:[] };
-      const sessions = data.sessions || [];
+async function loadChatMsgs() {
+  document.getElementById('chatMsgs').innerHTML='<div class="chat-empty">טוען...</div>';
+  try {
+    const r=await fetch(`/api/chat/${curChat}`,{headers:H()});
+    const msgs=r.ok?await r.json():[];
+    const c=document.getElementById('chatMsgs');
+    if(!msgs.length){c.innerHTML='<div class="chat-empty">אין הודעות עדיין 👋</div>';return;}
+    c.innerHTML='';
+    msgs.forEach(m=>appendMsg({text:m.text,sender:m.sender?._id||m.sender,time:m.createdAt},true));
+    c.scrollTop=c.scrollHeight;
+  } catch(e) {}
+}
 
-      document.getElementById('historyTable').innerHTML = sessions.length ? `
-        <table>
-          <thead><tr><th>מעסיק</th><th>תאריך</th><th>שעות</th><th>שכר נטו</th><th>סטטוס</th></tr></thead>
-          <tbody>
-            ${sessions.map(s => `
-              <tr>
-                <td style="font-weight:600">${s.employer?.businessName||'—'}</td>
-                <td style="color:var(--muted);font-size:0.82rem">${fmtDate(s.date)}</td>
-                <td style="font-weight:700">${s.totalHours}h</td>
-                <td style="color:var(--accent);font-weight:700">₪${fmt(s.netWorkerPay)}</td>
-                <td><span class="badge badge-${s.status}">${s.status==='approved'?'מאושר ✓':s.status==='pending_approval'?'ממתין ⏳':s.status==='disputed'?'מחלוקת ⚠️':'פעיל 🟢'}</span></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      ` : '<div class="empty-state"><div class="empty-icon">📋</div><p>אין היסטוריה עדיין</p></div>';
-    } catch(e) {
-      document.getElementById('historyTable').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>';
-    }
-  }
+function appendMsg(msg, bulk) {
+  const myId=user._id||user.id;
+  const mine=msg.sender===myId;
+  const c=document.getElementById('chatMsgs');
+  const empty=c.querySelector('.chat-empty'); if(empty) empty.remove();
+  const t=msg.time?fmtT(new Date(msg.time)):'';
+  const d=document.createElement('div'); d.className=`msg ${mine?'mine':'theirs'}`;
+  d.innerHTML=`<div class="msg-bubble">${(msg.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div><div class="msg-t">${t}</div>`;
+  c.appendChild(d);
+  if(!bulk) c.scrollTop=c.scrollHeight;
+}
 
-  // ── PROFILE ──
-  const AREAS = ['תל אביב והמרכז','ירושלים','חיפה והצפון','באר שבע והדרום','השרון','שפלה'];
-  const JOB_TYPES = ['משרה מלאה','משרה חלקית','זמנית','קבועה','סטודנטים','סופי שבוע'];
+async function sendMsg() {
+  const inp=document.getElementById('chatInput');
+  const text=inp.value.trim();
+  if(!text||!curChat) return;
+  if(PHONE.test(text)&&!confirm('⚠️ נראה שאתה מנסה לשתף טלפון.\nכל עסקאות חייבות להיות דרך WorkHour.\n\nלהמשיך?')) return;
+  inp.value=''; inp.style.height='auto';
+  try {
+    const r=await fetch(`/api/chat/${curChat}`,{method:'POST',headers:H(),body:JSON.stringify({text})});
+    if(!r.ok) throw new Error();
+    const m=await r.json();
+    if(chatSock) chatSock.emit('send_message',{chatId:curChat,message:text,sender:user._id||user.id,time:new Date().toISOString()});
+    appendMsg({text:m.text,sender:user._id||user.id,time:m.createdAt},false);
+  } catch(e) { toast('שגיאה','err'); }
+}
 
-  function renderCheckboxGroup(containerId, options, selected=[]) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    container.innerHTML = options.map(opt => `
-      <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:0.82rem;transition:all 0.15s" 
-        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="if(!this.querySelector('input').checked)this.style.borderColor='var(--border)'">
-        <input type="checkbox" value="${opt}" ${selected.includes(opt)?'checked':''} style="accent-color:var(--accent)" onchange="this.closest('label').style.borderColor=this.checked?'var(--accent)':'var(--border)'"> ${opt}
-      </label>
-    `).join('');
-  }
+// ── PROFILE ──
+async function loadProfile() {
+  document.getElementById('pAreas').innerHTML = AREAS.map(a=>`<label class="cb-label"><input type="checkbox" value="${a}"> ${a}</label>`).join('');
+  document.getElementById('pTypes').innerHTML = TYPES.map(t=>`<label class="cb-label"><input type="checkbox" value="${t}"> ${t}</label>`).join('');
+  try {
+    const r=await fetch(`${API}/api/auth/me`,{headers:H()});
+    const u=r.ok?await r.json():user;
+    document.getElementById('pFirst').value=u.firstName||'';
+    document.getElementById('pLast').value=u.lastName||'';
+    document.getElementById('pPhone').value=u.phone||'';
+    document.getElementById('pProf').value=u.profession||'';
+    document.getElementById('pBio').value=u.bio||'';
+    (u.preferredAreas||[]).forEach(a=>{const cb=document.querySelector(`#pAreas input[value="${a}"]`);if(cb)cb.checked=true;});
+    (u.preferredJobTypes||[]).forEach(t=>{const cb=document.querySelector(`#pTypes input[value="${t}"]`);if(cb)cb.checked=true;});
+  } catch(e) {}
+}
 
-  async function loadProfile() {
-    try {
-      const res = await fetch(`${API}/api/auth/me`, { headers: headers() });
-      const u = res.ok ? await res.json() : user;
-      document.getElementById('pFirstName').value = u.firstName || '';
-      document.getElementById('pLastName').value = u.lastName || '';
-      document.getElementById('pPhone').value = u.phone || '';
-      document.getElementById('pProfession').value = u.profession || '';
-      document.getElementById('pBio').value = u.bio || '';
-      renderCheckboxGroup('pAreaCheckboxes', AREAS, u.preferredAreas || []);
-      renderCheckboxGroup('pTypeCheckboxes', JOB_TYPES, u.preferredJobTypes || []);
-    } catch(e) { showToast('שגיאה בטעינה', 'error'); }
-  }
-
-  document.getElementById('profileForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const areas = [...document.querySelectorAll('#pAreaCheckboxes input:checked')].map(c=>c.value);
-    const types = [...document.querySelectorAll('#pTypeCheckboxes input:checked')].map(c=>c.value);
-    const body = {
-      firstName: document.getElementById('pFirstName').value,
-      lastName: document.getElementById('pLastName').value,
-      phone: document.getElementById('pPhone').value,
-      profession: document.getElementById('pProfession').value,
-      bio: document.getElementById('pBio').value,
-      preferredAreas: areas,
-      preferredJobTypes: types,
+document.getElementById('profileForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  try {
+    const body={
+      firstName:document.getElementById('pFirst').value, lastName:document.getElementById('pLast').value,
+      phone:document.getElementById('pPhone').value, profession:document.getElementById('pProf').value,
+      bio:document.getElementById('pBio').value,
+      preferredAreas:[...document.querySelectorAll('#pAreas input:checked')].map(c=>c.value),
+      preferredJobTypes:[...document.querySelectorAll('#pTypes input:checked')].map(c=>c.value),
     };
-    const pwd = document.getElementById('pPassword').value;
-    if (pwd) body.password = pwd;
-    try {
-      const res = await fetch(`${API}/api/auth/profile`, { method:'PATCH', headers:headers(), body:JSON.stringify(body) });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      localStorage.setItem('user', JSON.stringify({...user, ...updated}));
-      showToast('הפרטים עודכנו בהצלחה ✓');
-    } catch(e) { showToast('שגיאה בשמירה', 'error'); }
-  });
+    const pwd=document.getElementById('pPwd').value; if(pwd) body.password=pwd;
+    const r=await fetch(`${API}/api/auth/profile`,{method:'PATCH',headers:H(),body:JSON.stringify(body)});
+    if(!r.ok) throw new Error();
+    const u=await r.json(); localStorage.setItem('user',JSON.stringify({...user,...u}));
+    toast('נשמר ✓','ok');
+  } catch(e) { toast('שגיאה','err'); }
+});
 
-  // ── CHATS ──
-  async function loadChats() {
-    document.getElementById('chatsList').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    try {
-      // טען משרות שפנינו אליהן
-      const res = await fetch(`${API}/api/jobs`, { headers: headers() });
-      const jobs = res.ok ? await res.json() : [];
-      // סנן רק משרות שפנינו אליהן
-      const applied = jobs.filter(j => j.applicants?.some(a => (a.worker?._id || a.worker) === (user._id || user.id)));
-      
-      document.getElementById('chatsList').innerHTML = applied.length ? applied.map(j => {
-        const myApp = j.applicants?.find(a => (a.worker?._id || a.worker) === (user._id || user.id));
-        const chatId = j._id + '_' + (user._id || user.id);
-        return `
-          <div style="display:flex;align-items:center;gap:14px;padding:16px 24px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s" 
-               onclick="openChat('${chatId}', '${j.employer?.businessName||'מעסיק'}', '${j.title}')"
-               onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
-            <div style="width:44px;height:44px;border-radius:50%;background:var(--accent2);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;flex-shrink:0">
-              ${(j.employer?.businessName||'מ')[0]}
-            </div>
-            <div style="flex:1">
-              <div style="font-weight:700">${j.employer?.businessName||'מעסיק'}</div>
-              <div style="font-size:0.8rem;color:var(--muted)">💼 ${j.title}</div>
-            </div>
-            <span class="badge badge-${myApp?.status}">${myApp?.status==='interested'?'מאושר ✓':myApp?.status==='pending'?'ממתין':'נדחה'}</span>
-            <div style="font-size:1.2rem">›</div>
-          </div>
-        `;
-      }).join('') : '<div class="empty-state"><div class="empty-icon">💬</div><p>עדיין לא פנית למשרות</p></div>';
-    } catch(e) {
-      document.getElementById('chatsList').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה בטעינה</p></div>';
-    }
-  }
+document.getElementById('chatOverlay').addEventListener('click',e=>{if(e.target===document.getElementById('chatOverlay'))closeChat();});
+document.getElementById('applyModal').addEventListener('click',e=>{if(e.target===document.getElementById('applyModal'))closeApply();});
 
+function logout() { localStorage.clear(); window.location='/pages/login.html'; }
 
-  async function downloadExcel() {
-    try {
-      showToast('מכין קובץ...');
-      const res = await fetch(`${API}/api/sessions/my`, { headers: headers() });
-      const data = res.ok ? await res.json() : { sessions: [] };
-      const sessions = data.sessions || [];
-
-      const rows = [['מעסיק','תאריך','שעת התחלה','שעת סיום','שעות','שכר נטו','סטטוס']];
-      sessions.forEach(s => {
-        rows.push([
-          s.employer?.businessName || '—',
-          fmtDate(s.date),
-          s.startTime ? fmtTime(new Date(s.startTime)) : '',
-          s.endTime ? fmtTime(new Date(s.endTime)) : '',
-          s.totalHours,
-          s.netWorkerPay,
-          s.status === 'approved' ? 'מאושר' : s.status === 'pending_approval' ? 'ממתין לאישור' : s.status
-        ]);
-      });
-
-      const csv = '\uFEFF' + rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `דוח_שעות_${(user.name||'עובד').replace(' ','_')}_${new Date().toLocaleDateString('he-IL').replace(/\//g,'-')}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('הקובץ הורד ✓');
-    } catch(e) { showToast('שגיאה', 'error'); }
-  }
-
-  function logout() { localStorage.clear(); window.location='/pages/login.html'; }
-
-  loadOverview();
+// Init
+loadOverview();
+loadJobs();
 </script>
-
-<!-- START SHIFT MODAL -->
-<div id="startShiftModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:none;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:460px">
-    <h3 style="font-size:1.3rem;font-weight:800;margin-bottom:6px">▶ התחל משמרת</h3>
-    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:24px">בחר את המשרה שאתה הולך לעבוד בה</p>
-    <div id="shiftJobsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px"></div>
-    <button onclick="document.getElementById('startShiftModal').style.display='none'" style="width:100%;padding:12px;border-radius:10px;background:var(--surface2);border:none;color:var(--muted);font-family:Heebo,sans-serif;font-weight:700;cursor:pointer">ביטול</button>
-  </div>
-</div>
-
-<script>
-  function openStartShiftModal(jobs) {
-    const list = document.getElementById('shiftJobsList');
-    list.innerHTML = jobs.map(j => `
-      <div onclick="startShift('${j._id}', '${j.employer?._id}', ${j.hourlyRate}, '${j.title}', '${j.employer?.businessName||''}')"
-        style="padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:all 0.2s"
-        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-        <div style="font-weight:700;margin-bottom:4px">${j.title}</div>
-        <div style="font-size:0.82rem;color:var(--muted)">🏢 ${j.employer?.businessName||'—'} · ₪${j.hourlyRate} לשעה</div>
-      </div>
-    `).join('');
-    document.getElementById('startShiftModal').style.display = 'flex';
-  }
-
-  async function startShift(jobId, employerId, hourlyRate, title, business) {
-    document.getElementById('startShiftModal').style.display = 'none';
-    try {
-      const res = await fetch(`${API}/api/sessions/start`, {
-        method:'POST', headers:headers(),
-        body:JSON.stringify({ employerId, hourlyRate, jobId })
-      });
-      if (!res.ok) throw new Error((await res.json()).error);
-      const session = await res.json();
-      localStorage.setItem('activeSession', JSON.stringify(session));
-      isWorking = true;
-      clockStart = new Date(session.startTime);
-      startClockTick();
-      updateClockUI(true);
-      document.getElementById('activeSessionInfo').innerHTML = `
-        <div style="padding:20px">
-          <div style="font-size:0.88rem;color:var(--muted);margin-bottom:4px">עובד ב:</div>
-          <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">${title} · ${business}</div>
-          <div style="font-size:0.88rem;color:var(--muted)">התחלת עבודה: <strong style="color:var(--text)">${new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</strong></div>
-        </div>
-      `;
-      showToast('עבודה התחילה! ⏱️');
-    } catch(e) { showToast(e.message || 'שגיאה', 'error'); }
-  }
-</script>
-<!-- CHAT COMPONENT - להוסיף לשני הדשבורדים -->
-<!-- סגנונות צ'אט -->
-<style>
-  .chat-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:300; display:none; align-items:flex-end; justify-content:flex-end; padding:20px; }
-  .chat-overlay.open { display:flex; }
-  .chat-box { width:380px; height:520px; background:#1a1a2e; border:1px solid rgba(255,255,255,0.1); border-radius:20px; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden; }
-  .chat-header { padding:16px 20px; background:#16213e; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:12px; }
-  .chat-avatar { width:38px; height:38px; border-radius:50%; background:#00c896; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:0.95rem; color:#000; flex-shrink:0; }
-  .chat-name { font-weight:700; font-size:0.95rem; }
-  .chat-job { font-size:0.75rem; color:rgba(255,255,255,0.4); margin-top:2px; }
-  .chat-close { margin-right:auto; background:none; border:none; color:rgba(255,255,255,0.4); font-size:1.2rem; cursor:pointer; transition:color 0.2s; }
-  .chat-close:hover { color:#fff; }
-  .chat-messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
-  .chat-messages::-webkit-scrollbar { width:4px; }
-  .chat-messages::-webkit-scrollbar-track { background:transparent; }
-  .chat-messages::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
-  .msg { max-width:75%; display:flex; flex-direction:column; }
-  .msg.mine { align-self:flex-start; }
-  .msg.theirs { align-self:flex-end; }
-  .msg-bubble { padding:10px 14px; border-radius:16px; font-size:0.88rem; line-height:1.4; }
-  .msg.mine .msg-bubble { background:#00c896; color:#000; border-bottom-right-radius:4px; }
-  .msg.theirs .msg-bubble { background:#0f3460; color:#e8f0fe; border-bottom-left-radius:4px; }
-  .msg-time { font-size:0.68rem; color:rgba(255,255,255,0.3); margin-top:4px; padding:0 4px; }
-  .msg.mine .msg-time { text-align:right; }
-  .chat-input-row { padding:14px 16px; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:8px; align-items:flex-end; }
-  .chat-input { flex:1; background:#0f3460; border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 14px; color:#e8f0fe; font-family:'Heebo',sans-serif; font-size:0.9rem; outline:none; resize:none; max-height:100px; min-height:40px; transition:border-color 0.2s; }
-  .chat-input:focus { border-color:#00c896; }
-  .chat-input::placeholder { color:rgba(255,255,255,0.3); }
-  .chat-send { width:40px; height:40px; border-radius:12px; background:#00c896; border:none; color:#000; font-size:1.1rem; cursor:pointer; transition:all 0.2s; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-  .chat-send:hover { background:#00e0a8; transform:scale(1.05); }
-  .chat-empty { text-align:center; color:rgba(255,255,255,0.3); font-size:0.85rem; margin:auto; }
-  .chat-loading { text-align:center; padding:20px; color:rgba(255,255,255,0.3); }
-  
-  /* כפתור פתיחת צ'אט במועמד */
-  .btn-chat { border:1px solid rgba(0,200,150,0.3); color:#00c896; background:rgba(0,200,150,0.08); padding:7px 14px; border-radius:8px; font-family:'Heebo',sans-serif; font-size:0.8rem; font-weight:700; cursor:pointer; transition:all 0.15s; }
-  .btn-chat:hover { background:rgba(0,200,150,0.15); }
-  .chat-unread { display:inline-block; background:#00c896; color:#000; border-radius:50%; width:18px; height:18px; font-size:0.65rem; font-weight:900; text-align:center; line-height:18px; margin-right:4px; }
-</style>
-
-<!-- תיבת הצ'אט -->
-<div class="chat-overlay" id="chatOverlay">
-  <div class="chat-box">
-    <div class="chat-header">
-      <div class="chat-avatar" id="chatAvatar">?</div>
-      <div>
-        <div class="chat-name" id="chatName">שיחה</div>
-        <div class="chat-job" id="chatJobName"></div>
-      </div>
-      <button class="chat-close" onclick="closeChat()">✕</button>
-    </div>
-    <div class="chat-messages" id="chatMessages">
-      <div class="chat-loading">טוען הודעות...</div>
-    </div>
-    <div class="chat-input-row">
-      <textarea class="chat-input" id="chatInput" placeholder="כתוב הודעה..." rows="1"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
-        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-      <button class="chat-send" onclick="sendMessage()">➤</button>
-    </div>
-  </div>
-</div>
-
-<script>
-  let currentChatId = null;
-  let chatSocket = null;
-  let currentChatOtherName = '';
-
-  function openChat(chatId, otherName, jobTitle) {
-    currentChatId = chatId;
-    currentChatOtherName = otherName;
-    document.getElementById('chatAvatar').textContent = otherName[0] || '?';
-    document.getElementById('chatName').textContent = otherName;
-    document.getElementById('chatJobName').textContent = jobTitle || '';
-    document.getElementById('chatOverlay').classList.add('open');
-    loadMessages();
-    connectChatSocket(chatId);
-  }
-
-  function closeChat() {
-    document.getElementById('chatOverlay').classList.remove('open');
-    currentChatId = null;
-    if (chatSocket) { chatSocket.emit('leave_chat', currentChatId); }
-  }
-
-  function connectChatSocket(chatId) {
-    if (typeof io === 'undefined') return;
-    if (!chatSocket) chatSocket = io();
-    chatSocket.emit('join_chat', chatId);
-    chatSocket.off('receive_message');
-    chatSocket.on('receive_message', (msg) => {
-      if (msg.chatId === chatId) appendMessage(msg, false);
-    });
-  }
-
-  async function loadMessages() {
-    document.getElementById('chatMessages').innerHTML = '<div class="chat-loading">טוען...</div>';
-    try {
-      const res = await fetch(`/api/chat/${currentChatId}`, { headers: headers() });
-      const msgs = res.ok ? await res.json() : [];
-      const container = document.getElementById('chatMessages');
-      if (!msgs.length) {
-        container.innerHTML = '<div class="chat-empty">אין הודעות עדיין<br>התחל את השיחה 👋</div>';
-        return;
-      }
-      container.innerHTML = '';
-      msgs.forEach(m => appendMessage({
-        text: m.text,
-        sender: m.sender?._id || m.sender,
-        senderName: m.sender?.firstName || m.sender?.businessName || '',
-        time: m.createdAt,
-        chatId: currentChatId
-      }, true));
-      scrollToBottom();
-    } catch(e) {
-      document.getElementById('chatMessages').innerHTML = '<div class="chat-empty">שגיאה בטעינה</div>';
-    }
-  }
-
-  function appendMessage(msg, skipScroll) {
-    const myId = user._id || user.id;
-    const isMine = msg.sender === myId || msg.sender?._id === myId;
-    const container = document.getElementById('chatMessages');
-    
-    // הסר empty state
-    const empty = container.querySelector('.chat-empty, .chat-loading');
-    if (empty) empty.remove();
-
-    const time = msg.time ? new Date(msg.time).toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'}) : '';
-    const div = document.createElement('div');
-    div.className = `msg ${isMine ? 'mine' : 'theirs'}`;
-    div.innerHTML = `<div class="msg-bubble">${escHtml(msg.text)}</div><div class="msg-time">${time}</div>`;
-    container.appendChild(div);
-    if (!skipScroll) scrollToBottom();
-  }
-
-  function scrollToBottom() {
-    const c = document.getElementById('chatMessages');
-    c.scrollTop = c.scrollHeight;
-  }
-
-  const PHONE_PATTERN = /(?:\d[\s\-.]?){9,}|מה.*?(?:טלפון|מספר|נייד)|(?:טלפון|מספר|נייד).*?שלך|צור.*?קשר.*?(?:ישיר|מחוץ)/i;
-
-  async function sendMessage() {
-    const input = document.getElementById('chatInput');
-    const text = input.value.trim();
-    if (!text || !currentChatId) return;
-    if (PHONE_PATTERN.test(text)) {
-      if (!confirm('⚠️ נראה שאתה מנסה לשתף מספר טלפון או ליצור קשר מחוץ לאפליקציה.\n\nכל העסקאות חייבות להתבצע דרך WorkHour בלבד.\n\nלחץ אישור רק אם ההודעה לא קשורה לזה.')) return;
-    }
-    input.value = '';
-    input.style.height = 'auto';
-
-    try {
-      const res = await fetch(`/api/chat/${currentChatId}`, {
-        method: 'POST', headers: headers(),
-        body: JSON.stringify({ text })
-      });
-      if (!res.ok) throw new Error();
-      const msg = await res.json();
-      
-      // שלח דרך socket לצד השני
-      if (chatSocket) {
-        chatSocket.emit('send_message', {
-          chatId: currentChatId,
-          message: text,
-          sender: user._id || user.id,
-          time: new Date().toISOString()
-        });
-      }
-      
-      appendMessage({
-        text: msg.text,
-        sender: user._id || user.id,
-        time: msg.createdAt,
-        chatId: currentChatId
-      }, false);
-    } catch(e) { showToast('שגיאה בשליחה', 'error'); }
-  }
-
-  function escHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-  }
-
-  // סגירה בלחיצה על הרקע
-  document.getElementById('chatOverlay').addEventListener('click', function(e) {
-    if (e.target === this) closeChat();
-  });
-</script>
-
-<nav class="bottom-nav">
-  <div class="bottom-nav-items" id="bottomNavItems">
-    <div class="bottom-nav-item active" onclick="navigate('overview')" data-section="overview">
-      <div class="bnav-icon">📊</div>
-      <div class="bnav-label">ראשי</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('clock')" data-section="clock">
-      <div class="bnav-icon">⏱️</div>
-      <div class="bnav-label">שעון</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('jobs')" data-section="jobs">
-      <div class="bnav-icon">🔍</div>
-      <div class="bnav-label">משרות</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('earnings')" data-section="earnings">
-      <div class="bnav-icon">💰</div>
-      <div class="bnav-label">רווחים</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('messages')" data-section="messages">
-      <div class="bnav-icon">💬</div>
-      <div class="bnav-label">הודעות</div>
-      <div class="bnav-badge" id="bnMsgBadge" style="display:none">0</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('profile')" data-section="profile">
-      <div class="bnav-icon">👤</div>
-      <div class="bnav-label">פרופיל</div>
-    </div>
-  </div>
-</nav>
-
 </body>
 </html>
