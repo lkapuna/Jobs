@@ -1108,5 +1108,108 @@
   });
 </script>
 
+
+<!-- EXCEL FILTER MODAL -->
+<div id="excelModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px;width:100%;max-width:420px">
+    <h3 style="font-size:1.2rem;font-weight:800;margin-bottom:20px">📥 הורדת דוח Excel</h3>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">סנן לפי</label>
+      <select id="excelFilterType" style="width:100%;padding:11px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.9rem;outline:none" onchange="updateExcelFilter()">
+        <option value="all">כל המשמרות</option>
+        <option value="employer">לפי מעסיק</option>
+        <option value="worker">לפי עובד</option>
+      </select>
+    </div>
+    <div id="excelUserSelect" style="display:none;margin-bottom:16px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">בחר</label>
+      <select id="excelUserId" style="width:100%;padding:11px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.9rem;outline:none">
+        <option value="">טוען...</option>
+      </select>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">סטטוס</label>
+      <select id="excelStatus" style="width:100%;padding:11px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.9rem;outline:none">
+        <option value="">הכל</option>
+        <option value="approved">מאושר בלבד</option>
+        <option value="pending_approval">ממתין לאישור</option>
+        <option value="disputed">מחלוקות</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button onclick="document.getElementById('excelModal').style.display='none'" style="padding:10px 20px;border-radius:10px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:Heebo,sans-serif;font-weight:700;cursor:pointer">ביטול</button>
+      <button onclick="downloadAdminExcelFiltered()" style="padding:10px 24px;border-radius:10px;background:var(--accent);border:none;color:#fff;font-family:Heebo,sans-serif;font-weight:700;cursor:pointer">📥 הורד</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showExcelFilterModal() {
+    document.getElementById('excelModal').style.display = 'flex';
+    updateExcelFilter();
+  }
+
+  async function updateExcelFilter() {
+    const type = document.getElementById('excelFilterType').value;
+    const sel = document.getElementById('excelUserSelect');
+    const userSel = document.getElementById('excelUserId');
+    if (type === 'all') { sel.style.display = 'none'; return; }
+    sel.style.display = 'block';
+    try {
+      const res = await fetch('/api/admin/users', { headers: headers() });
+      const users = res.ok ? await res.json() : [];
+      const filtered = users.filter(u => u.role === (type === 'employer' ? 'employer' : 'worker'));
+      userSel.innerHTML = filtered.map(u => `<option value="${u._id}">${u.businessName || u.firstName + ' ' + u.lastName}</option>`).join('');
+    } catch(e) {}
+  }
+
+  async function downloadAdminExcel(filterType, userId, status) {
+    try {
+      showToast('מכין קובץ Excel...');
+      const res = await fetch('/api/admin/sessions', { headers: headers() });
+      let sessions = res.ok ? await res.json() : [];
+
+      if (filterType === 'employer' && userId) sessions = sessions.filter(s => s.employer?._id === userId || s.employer === userId);
+      if (filterType === 'worker' && userId) sessions = sessions.filter(s => s.worker?._id === userId || s.worker === userId);
+      if (status) sessions = sessions.filter(s => s.status === status);
+
+      const fmtD = d => d ? new Date(d).toLocaleDateString('he-IL') : '';
+      const fmtT = d => d ? new Date(d).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) : '';
+
+      const rows = [['עובד','מעסיק','תאריך','שעת התחלה','שעת סיום','שעות','שכר גולמי','שכר נטו עובד','עלות מעסיק','סטטוס']];
+      sessions.forEach(s => rows.push([
+        `${s.worker?.firstName||''} ${s.worker?.lastName||''}`,
+        s.employer?.businessName || '—',
+        fmtD(s.date),
+        fmtT(s.startTime),
+        fmtT(s.endTime),
+        s.totalHours,
+        s.grossPay,
+        s.netWorkerPay,
+        s.totalEmployerCost,
+        s.status === 'approved' ? 'מאושר' : s.status === 'pending_approval' ? 'ממתין' : s.status
+      ]));
+
+      const csv = '\uFEFF' + rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `דוח_שעות_WorkHour_${new Date().toLocaleDateString('he-IL').replace(/\//g,'-')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('הקובץ הורד בהצלחה ✓');
+    } catch(e) { showToast('שגיאה', 'error'); }
+  }
+
+  function downloadAdminExcelFiltered() {
+    const type = document.getElementById('excelFilterType').value;
+    const userId = document.getElementById('excelUserId').value;
+    const status = document.getElementById('excelStatus').value;
+    document.getElementById('excelModal').style.display = 'none';
+    downloadAdminExcel(type, userId, status);
+  }
+</script>
+
 </body>
 </html>
