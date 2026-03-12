@@ -107,3 +107,43 @@ router.patch('/sessions/:id/resolve', ...adminOnly, async (req, res) => {
 });
 
 module.exports = router;
+
+// DELETE /api/admin/users/:id - מחיקת משתמש
+router.delete('/users/:id', ...adminOnly, async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: 'משתמש נמחק' });
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאה' });
+  }
+});
+
+// DELETE /api/admin/jobs/:id - מחיקת משרה
+router.delete('/jobs/:id', ...adminOnly, async (req, res) => {
+  try {
+    await Job.findByIdAndDelete(req.params.id);
+    res.json({ message: 'משרה נמחקה' });
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאה' });
+  }
+});
+
+// PATCH /api/admin/jobs/:id - עריכת משרה
+router.patch('/jobs/:id', ...adminOnly, async (req, res) => {
+  try {
+    const job = await Job.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(job);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאה' });
+  }
+});
+
+// GET /api/admin/jobs - כל המשרות
+router.get('/jobs', ...adminOnly, async (req, res) => {
+  try {
+    const jobs = await Job.find().populate('employer', 'businessName').sort({ createdAt: -1 });
+    res.json(jobs);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאה' });
+  }
+});
