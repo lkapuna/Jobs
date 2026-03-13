@@ -3,145 +3,72 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>התחברות — WorkHour</title>
+  <title>התחברות — שעתי</title>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    :root { --primary: #1a1a2e; --accent: #e94560; --gold: #f5a623; }
-    body {
-      font-family: 'Heebo', sans-serif;
-      background: var(--primary);
-      color: #f8f9fa;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 18px 40px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
+    :root { --accent: #E05A2B; }
+    body { font-family: 'Heebo', sans-serif; background: #0A0A0A; color: #f8f9fa; min-height: 100vh; display: flex; flex-direction: column; }
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 18px 40px; border-bottom: 1px solid rgba(255,255,255,0.08); }
     .logo { font-size: 1.6rem; font-weight: 900; color: #fff; text-decoration: none; }
     .logo span { color: var(--accent); }
     .main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 20px; }
-    .login-box {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 24px;
-      padding: 52px 44px;
-      width: 100%;
-      max-width: 440px;
-    }
+    .login-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 52px 44px; width: 100%; max-width: 440px; }
     h2 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
     .subtitle { color: rgba(255,255,255,0.45); margin-bottom: 36px; }
     .form-group { margin-bottom: 18px; }
     label { display: block; font-size: 0.88rem; font-weight: 600; color: rgba(255,255,255,0.6); margin-bottom: 7px; }
-    input {
-      width: 100%;
-      padding: 14px 16px;
-      background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 10px;
-      color: #fff;
-      font-family: 'Heebo', sans-serif;
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
+    input { width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: #fff; font-family: 'Heebo', sans-serif; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
     input:focus { border-color: var(--accent); background: rgba(255,255,255,0.1); }
-    .submit-btn {
-      width: 100%;
-      padding: 15px;
-      background: var(--accent);
-      border: none;
-      border-radius: 12px;
-      color: #fff;
-      font-family: 'Heebo', sans-serif;
-      font-size: 1.05rem;
-      font-weight: 700;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: all 0.2s;
-    }
-    .submit-btn:hover { background: #c73652; transform: translateY(-1px); }
-    .register-link { text-align: center; margin-top: 20px; color: rgba(255,255,255,0.45); font-size: 0.9rem; }
-    .register-link a { color: var(--accent); text-decoration: none; font-weight: 600; }
-    .error-msg {
-      background: rgba(233,69,96,0.1);
-      border: 1px solid rgba(233,69,96,0.3);
-      color: #ff6b6b;
-      padding: 12px 16px;
-      border-radius: 10px;
-      margin-bottom: 18px;
-      font-size: 0.9rem;
-      display: none;
-    }
+    .submit-btn { width: 100%; padding: 15px; background: var(--accent); color: #fff; border: none; border-radius: 12px; font-family: 'Heebo', sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
+    .submit-btn:hover { background: #C44820; }
+    .error-msg { color: #ff6b6b; font-size: 0.85rem; margin-top: 12px; display: none; text-align: center; }
+    .footer-link { text-align: center; margin-top: 24px; color: rgba(255,255,255,0.45); font-size: 0.88rem; }
+    .footer-link a { color: var(--accent); text-decoration: none; font-weight: 700; }
   </style>
 </head>
 <body>
 <nav>
-  <a href="/" class="logo">Work<span>Hour</span></a>
+  <a href="/" class="logo">שע<span>תי</span></a>
 </nav>
 <div class="main">
   <div class="login-box">
-    <h2>שלום 👋</h2>
+    <h2>👋 שלום</h2>
     <p class="subtitle">התחבר לחשבון שלך</p>
-    <div class="error-msg" id="errorMsg"></div>
-    <form id="loginForm">
-      <div class="form-group">
-        <label>אימייל</label>
-        <input type="email" id="email" placeholder="example@email.com" required>
-      </div>
-      <div class="form-group">
-        <label>סיסמה</label>
-        <input type="password" id="password" placeholder="הסיסמה שלך" required>
-      </div>
-      <button type="submit" class="submit-btn">התחברות</button>
-    </form>
-    <div class="register-link">
-      אין לך חשבון? <a href="/pages/register.html">הרשמה חינם</a>
+    <div class="form-group">
+      <label>אימייל</label>
+      <input type="email" id="email" placeholder="example@email.com" autocomplete="email">
     </div>
+    <div class="form-group">
+      <label>סיסמה</label>
+      <input type="password" id="password" placeholder="הסיסמה שלך" autocomplete="current-password">
+    </div>
+    <button class="submit-btn" onclick="login()">התחברות</button>
+    <div class="error-msg" id="errorMsg"></div>
+    <p class="footer-link">אין לך חשבון? <a href="/pages/register.html">הרשמה חינם</a></p>
   </div>
 </div>
-
 <script>
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = e.target.querySelector('.submit-btn');
-    btn.textContent = 'מתחבר...';
-    btn.disabled = true;
-
+  const API = '';
+  async function login() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const err = document.getElementById('errorMsg');
+    err.style.display = 'none';
+    if (!email || !password) { showErr('נא למלא את כל השדות'); return; }
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: document.getElementById('email').value,
-          password: document.getElementById('password').value
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      const role = data.user.role;
-      if (role === 'worker') window.location = '/pages/worker-dashboard.html';
-      else if (role === 'employer') window.location = '/pages/employer-dashboard.html';
-      else window.location = '/pages/admin-dashboard.html';
-
-    } catch (err) {
-      const errEl = document.getElementById('errorMsg');
-      errEl.textContent = err.message;
-      errEl.style.display = 'block';
-      btn.textContent = 'התחברות';
-      btn.disabled = false;
-    }
-  });
+      const r = await fetch(`${API}/api/auth/login`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({email, password}) });
+      const d = await r.json();
+      if (!r.ok) { showErr(d.message || 'שגיאה בהתחברות'); return; }
+      localStorage.setItem('token', d.token);
+      localStorage.setItem('user', JSON.stringify(d.user));
+      if (d.user.role === 'admin') window.location = '/pages/admin-dashboard.html';
+      else if (d.user.role === 'employer') window.location = '/pages/employer-dashboard.html';
+      else window.location = '/pages/worker-dashboard.html';
+    } catch(e) { showErr('שגיאת חיבור לשרת'); }
+  }
+  function showErr(msg) { const err = document.getElementById('errorMsg'); err.textContent = msg; err.style.display = 'block'; }
+  document.addEventListener('keydown', e => { if(e.key==='Enter') login(); });
 </script>
 </body>
 </html>
