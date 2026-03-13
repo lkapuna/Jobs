@@ -160,13 +160,13 @@
     .toast.err { background:var(--red); color:#fff; border-color:transparent; }
 
     /* CHAT OVERLAY */
-    .chat-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:300; display:none; align-items:flex-end; }
+    .chat-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; display:none; align-items:flex-end; }
     .chat-overlay.open { display:flex; }
-    .chat-box { width:100%; height:92vh; background:#111827; border-radius:20px 20px 0 0; display:flex; flex-direction:column; overflow:hidden; }
+    .chat-box { width:100%; height:92dvh; background:#111827; border-radius:20px 20px 0 0; display:flex; flex-direction:column; overflow:hidden; }
     .chat-hdr { padding:0; background:#0d1520; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; }
-    .chat-back { display:flex; align-items:center; gap:10px; padding:14px 16px; cursor:pointer; background:none; border:none; border-bottom:1px solid rgba(255,255,255,0.06); width:100%; text-align:right; }
+    .chat-back { display:flex; align-items:center; gap:10px; padding:18px 16px; min-height:56px; cursor:pointer; background:rgba(255,255,255,0.06); border:none; border-bottom:2px solid rgba(255,255,255,0.12); width:100%; text-align:right; -webkit-tap-highlight-color:transparent; }
     .chat-back-arrow { font-size:1.3rem; color:#fff; line-height:1; }
-    .chat-back-label { font-size:0.82rem; color:rgba(240,237,232,0.55); font-family:"Heebo",sans-serif; }
+    .chat-back-label { font-size:1rem; color:#fff; font-family:"Heebo",sans-serif; font-weight:700; }
     .chat-hdr-info { display:flex; align-items:center; gap:10px; padding:12px 16px; }
     .chat-hdr-av { width:36px; height:36px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:900; color:#fff; font-size:0.9rem; flex-shrink:0; }
     .chat-hdr-name { font-weight:700; font-size:0.9rem; color:#f0ede8; }
