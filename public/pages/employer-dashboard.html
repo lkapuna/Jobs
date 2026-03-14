@@ -644,6 +644,7 @@
       }
       .chat-box {
         width: 100vw !important;
+        height: 92vh !important;
         height: 92dvh !important;
         border-radius: 20px 20px 0 0 !important;
       }
@@ -1326,13 +1327,17 @@
       const res = await fetch('/api/chat/my-conversations', { headers: headers() });
       if (!res.ok) throw new Error();
       const convs = await res.json();
-      if (!convs.length) { box.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">אין שיחות עדיין</div>'; return; }
+      if (!convs.length) {
+        box.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">אין שיחות עדיין</div>';
+        return;
+      }
       box.innerHTML = convs.map(conv => {
         const name = conv.otherName || 'שיחה';
         const lastMsg = conv.lastMessage || '';
         const unread = conv.unread || 0;
-        return `<div onclick="openChat('${conv.chatId}', '${name}', '')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border-radius:14px;cursor:pointer;border:1px solid var(--border);margin-bottom:4px">
-          <div style="width:42px;height:42px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1rem;color:#fff;flex-shrink:0">${name[0]||'?'}</div>
+        const initial = name[0] || '?';
+        return `<div onclick="openChat('${conv.chatId}', '${name}', '')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border-radius:14px;cursor:pointer;border:1px solid var(--border)">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1rem;color:#fff;flex-shrink:0">${initial}</div>
           <div style="flex:1;overflow:hidden">
             <div style="font-weight:700;font-size:0.95rem">${name}</div>
             <div style="font-size:0.82rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastMsg}</div>
@@ -1340,9 +1345,10 @@
           ${unread ? `<div style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;font-size:0.7rem;font-weight:900;display:flex;align-items:center;justify-content:center">${unread}</div>` : ''}
         </div>`;
       }).join('');
-    } catch(e) { box.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">שגיאה</div>'; }
+    } catch(e) {
+      box.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">שגיאה בטעינת שיחות</div>';
+    }
   }
-
 
   function logout() {
     localStorage.clear();
@@ -1530,8 +1536,8 @@
 <div class="chat-overlay" id="chatOverlay" onclick="closeChat()">
   <div class="chat-box" onclick="event.stopPropagation()">
     <div class="chat-header" style="flex-direction:column;padding:0;align-items:stretch">
-      <button onclick="closeChat()" style="display:flex;align-items:center;gap:8px;padding:18px 16px;min-height:56px;background:rgba(255,255,255,0.06);border:none;border-bottom:2px solid rgba(255,255,255,0.12);cursor:pointer;color:#fff;font-family:Heebo,sans-serif;font-size:1rem;font-weight:700;text-align:right;width:100%;-webkit-tap-highlight-color:transparent">
-        <span style="font-size:1.6rem;color:#E05A2B;font-weight:900">←</span> חזור
+      <button onclick="closeChat()" style="display:flex;align-items:center;gap:10px;padding:16px 16px;min-height:52px;background:rgba(255,255,255,0.04);border:none;border-bottom:1.5px solid rgba(255,255,255,0.1);cursor:pointer;color:rgba(240,237,232,0.85);font-family:Heebo,sans-serif;font-size:0.9rem;font-weight:600;text-align:right;width:100%;-webkit-tap-highlight-color:rgba(255,255,255,0.1)">
+        <span style="font-size:1.4rem;color:#fff;font-weight:700">←</span> חזור
       </button>
       <div style="display:flex;align-items:center;gap:10px;padding:11px 16px">
         <div class="chat-avatar" id="chatAvatar">?</div>
@@ -1701,6 +1707,10 @@
     </div>
     <div class="bottom-nav-item" onclick="navigate('profile')" data-section="profile" style="color:rgba(255,255,255,0.5)">
       <div class="bnav-icon">👤</div><div class="bnav-label" style="color:inherit">פרופיל</div>
+    </div>
+    <div class="bottom-nav-item" onclick="navigate('messages')" data-section="messages" style="color:rgba(255,255,255,0.5)">
+      <div class="bnav-icon">💬</div><div class="bnav-label" style="color:inherit">הודעות</div>
+      <div class="bnav-badge" id="bnMsgBadge" style="display:none">0</div>
     </div>
     <div class="bottom-nav-item" onclick="navigate('messages')" data-section="messages" style="color:rgba(255,255,255,0.5)">
       <div class="bnav-icon">💬</div><div class="bnav-label" style="color:inherit">הודעות</div>
