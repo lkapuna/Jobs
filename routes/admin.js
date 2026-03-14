@@ -51,6 +51,23 @@ router.get('/users', ...adminOnly, async (req, res) => {
   }
 });
 
+// PATCH /api/admin/users/:id - עדכון פרטי משתמש
+router.patch('/users/:id', ...adminOnly, async (req, res) => {
+  try {
+    const { firstName, lastName, phone, businessName } = req.body;
+    const update = {};
+    if (firstName !== undefined) update.firstName = firstName;
+    if (lastName  !== undefined) update.lastName  = lastName;
+    if (phone     !== undefined) update.phone      = phone;
+    if (businessName !== undefined) update.businessName = businessName;
+    const user = await User.findByIdAndUpdate(req.params.id, update, { new: true }).select('-password');
+    if (!user) return res.status(404).json({ error: 'משתמש לא נמצא' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאה בעדכון' });
+  }
+});
+
 // PATCH /api/admin/users/:id/block - חסימת משתמש
 router.patch('/users/:id/block', ...adminOnly, async (req, res) => {
   try {
