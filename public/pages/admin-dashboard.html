@@ -1004,6 +1004,8 @@
                     ? `<button class="btn-sm btn-sm-danger" onclick="toggleBlock('${u._id}', false)">🚫 חסום</button>`
                     : `<button class="btn-sm btn-sm-success" onclick="toggleBlock('${u._id}', true)">✓ שחרר</button>`
                   }
+                  <button class="btn-sm" style="background:rgba(99,102,241,0.15);color:#818cf8" onclick="openEditUser('${u._id}', '${u.firstName || u.businessName || ''}', '${u.lastName || ''}', '${u.phone || ''}', '${u.email}')">✏️ ערוך</button>
+                  <button class="btn-sm" style="background:rgba(224,90,43,0.15);color:#E05A2B" onclick="openAdminChat('${u._id}', '${u.firstName ? u.firstName + ' ' + u.lastName : u.businessName}', '${(u.firstName || u.businessName || 'A')[0]}')">💬 צ'אט</button>
                   <button class="btn-sm btn-sm-danger" onclick="deleteUser('${u._id}', '${u.firstName || u.businessName || u.email}')">🗑️ מחק</button>
                 </div>
               </td>
@@ -1472,6 +1474,155 @@
     </div>
   </div>
 </nav>
+
+<!-- EDIT USER MODAL -->
+<div id="editUserModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9000;align-items:center;justify-content:center;padding:20px;display:none">
+  <div style="background:var(--surface);border-radius:20px;padding:32px;width:100%;max-width:440px;border:1px solid var(--border)">
+    <h3 style="margin-bottom:20px;font-size:1.1rem">✏️ עריכת משתמש</h3>
+    <input type="hidden" id="editUserId">
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:0.82rem;color:var(--muted);margin-bottom:6px">שם פרטי</label>
+      <input id="editUserFirst" type="text" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;outline:none">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="display:block;font-size:0.82rem;color:var(--muted);margin-bottom:6px">שם משפחה / עסק</label>
+      <input id="editUserLast" type="text" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;outline:none">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="display:block;font-size:0.82rem;color:var(--muted);margin-bottom:6px">טלפון</label>
+      <input id="editUserPhone" type="tel" style="width:100%;padding:11px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;outline:none">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveEditUser()" style="flex:1;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:Heebo,sans-serif;font-weight:700;cursor:pointer">שמור</button>
+      <button onclick="document.getElementById('editUserModal').style.display='none'" style="flex:1;padding:12px;background:var(--surface2);color:var(--text);border:none;border-radius:12px;font-family:Heebo,sans-serif;font-weight:700;cursor:pointer">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN CHAT OVERLAY -->
+<div id="adminChatOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:none;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeAdminChat()">
+  <div style="width:100%;max-width:520px;height:92dvh;background:#111827;border-radius:20px 20px 0 0;display:flex;flex-direction:column;overflow:hidden">
+    <!-- כפתור חזור -->
+    <button onclick="closeAdminChat()" style="display:flex;align-items:center;gap:10px;padding:18px 16px;min-height:56px;background:rgba(255,255,255,0.06);border:none;border-bottom:2px solid rgba(255,255,255,0.12);width:100%;color:#fff;font-family:Heebo,sans-serif;font-size:1rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">
+      <span style="font-size:1.6rem;color:#E05A2B;font-weight:900">←</span> חזור
+    </button>
+    <!-- כותרת -->
+    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.08)">
+      <div id="adminChatAv" style="width:38px;height:38px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1rem;color:#fff;flex-shrink:0">?</div>
+      <div>
+        <div id="adminChatName" style="font-weight:700;font-size:0.95rem">שיחה</div>
+        <div style="font-size:0.75rem;color:rgba(255,255,255,0.4)">צ'אט אדמין</div>
+      </div>
+    </div>
+    <!-- הודעות -->
+    <div id="adminChatMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px"></div>
+    <!-- שדה כתיבה -->
+    <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;gap:10px;align-items:center">
+      <input id="adminChatInput" type="text" placeholder="כתוב הודעה..." onkeydown="if(event.key==='Enter')sendAdminMessage()"
+        style="flex:1;padding:12px 16px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:24px;color:#fff;font-family:Heebo,sans-serif;font-size:0.9rem;outline:none">
+      <button onclick="sendAdminMessage()" style="width:42px;height:42px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">➤</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── עריכת משתמש ──
+  function openEditUser(id, first, last, phone, email) {
+    document.getElementById('editUserId').value = id;
+    document.getElementById('editUserFirst').value = first;
+    document.getElementById('editUserLast').value = last;
+    document.getElementById('editUserPhone').value = phone;
+    document.getElementById('editUserModal').style.display = 'flex';
+  }
+
+  async function saveEditUser() {
+    const id = document.getElementById('editUserId').value;
+    const body = {
+      firstName: document.getElementById('editUserFirst').value.trim(),
+      lastName:  document.getElementById('editUserLast').value.trim(),
+      phone:     document.getElementById('editUserPhone').value.trim(),
+    };
+    try {
+      const res = await fetch(`${API}/api/admin/users/${id}`, {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error();
+      document.getElementById('editUserModal').style.display = 'none';
+      cache.users = null;
+      showToast('המשתמש עודכן בהצלחה ✓');
+      loadUsers();
+    } catch(e) { showToast('שגיאה בעדכון', 'error'); }
+  }
+
+  document.getElementById('editUserModal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+  });
+
+  // ── צ'אט אדמין ──
+  let adminChatUserId = null;
+  let adminChatInterval = null;
+
+  function openAdminChat(userId, name, initial) {
+    adminChatUserId = userId;
+    document.getElementById('adminChatName').textContent = name;
+    document.getElementById('adminChatAv').textContent = initial;
+    document.getElementById('adminChatMessages').innerHTML = '';
+    document.getElementById('adminChatOverlay').style.display = 'flex';
+    loadAdminChatMessages();
+    adminChatInterval = setInterval(loadAdminChatMessages, 4000);
+  }
+
+  function closeAdminChat() {
+    document.getElementById('adminChatOverlay').style.display = 'none';
+    clearInterval(adminChatInterval);
+    adminChatUserId = null;
+  }
+
+  async function loadAdminChatMessages() {
+    if (!adminChatUserId) return;
+    try {
+      const chatId = [getCurrentUserId(), adminChatUserId].sort().join('_');
+      const res = await fetch(`${API}/api/chat/${chatId}`, { headers: headers() });
+      if (!res.ok) return;
+      const msgs = await res.json();
+      const box = document.getElementById('adminChatMessages');
+      const isBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+      box.innerHTML = msgs.map(m => {
+        const isMe = m.sender === getCurrentUserId() || m.sender?._id === getCurrentUserId();
+        return `<div style="display:flex;justify-content:${isMe ? 'flex-end' : 'flex-start'}">
+          <div style="max-width:72%;padding:10px 14px;border-radius:${isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px'};background:${isMe ? 'var(--accent)' : 'rgba(255,255,255,0.1)'};color:#fff;font-size:0.9rem;line-height:1.4">
+            ${m.content}
+            <div style="font-size:0.7rem;opacity:0.55;margin-top:4px;text-align:${isMe ? 'left' : 'right'}">${new Date(m.createdAt).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>
+          </div>
+        </div>`;
+      }).join('');
+      if (isBottom) box.scrollTop = box.scrollHeight;
+    } catch(e) {}
+  }
+
+  async function sendAdminMessage() {
+    const input = document.getElementById('adminChatInput');
+    const content = input.value.trim();
+    if (!content || !adminChatUserId) return;
+    input.value = '';
+    try {
+      const chatId = [getCurrentUserId(), adminChatUserId].sort().join('_');
+      await fetch(`${API}/api/chat/${chatId}`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ content })
+      });
+      loadAdminChatMessages();
+    } catch(e) {}
+  }
+
+  function getCurrentUserId() {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    return user._id || user.id || '';
+  }
+</script>
 
 </body>
 </html>
