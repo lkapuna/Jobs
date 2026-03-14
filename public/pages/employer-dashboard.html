@@ -1318,6 +1318,32 @@
     } catch(e) { showToast('שגיאה', 'error'); }
   }
 
+  // ── INBOX ──
+  async function loadInbox() {
+    const box = document.getElementById('inboxList');
+    box.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">טוען שיחות...</div>';
+    try {
+      const res = await fetch('/api/chat/my-conversations', { headers: headers() });
+      if (!res.ok) throw new Error();
+      const convs = await res.json();
+      if (!convs.length) { box.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">אין שיחות עדיין</div>'; return; }
+      box.innerHTML = convs.map(conv => {
+        const name = conv.otherName || 'שיחה';
+        const lastMsg = conv.lastMessage || '';
+        const unread = conv.unread || 0;
+        return `<div onclick="openChat('${conv.chatId}', '${name}', '')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border-radius:14px;cursor:pointer;border:1px solid var(--border);margin-bottom:4px">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1rem;color:#fff;flex-shrink:0">${name[0]||'?'}</div>
+          <div style="flex:1;overflow:hidden">
+            <div style="font-weight:700;font-size:0.95rem">${name}</div>
+            <div style="font-size:0.82rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastMsg}</div>
+          </div>
+          ${unread ? `<div style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;font-size:0.7rem;font-weight:900;display:flex;align-items:center;justify-content:center">${unread}</div>` : ''}
+        </div>`;
+      }).join('');
+    } catch(e) { box.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">שגיאה</div>'; }
+  }
+
+
   function logout() {
     localStorage.clear();
     window.location = '/pages/login.html';
@@ -1494,6 +1520,12 @@
   .chat-unread { display:inline-block; background:#E05A2B; color:#000; border-radius:50%; width:18px; height:18px; font-size:0.65rem; font-weight:900; text-align:center; line-height:18px; margin-right:4px; }
 </style>
 
+<!-- MESSAGES SECTION -->
+<div class="section" id="section-messages">
+  <div class="page-header"><h2>הודעות</h2><p>כל השיחות שלך</p></div>
+  <div id="inboxList" style="display:flex;flex-direction:column;gap:10px;padding:16px"></div>
+</div>
+
 <!-- תיבת הצ'אט -->
 <div class="chat-overlay" id="chatOverlay" onclick="closeChat()">
   <div class="chat-box" onclick="event.stopPropagation()">
@@ -1669,6 +1701,10 @@
     </div>
     <div class="bottom-nav-item" onclick="navigate('profile')" data-section="profile" style="color:rgba(255,255,255,0.5)">
       <div class="bnav-icon">👤</div><div class="bnav-label" style="color:inherit">פרופיל</div>
+    </div>
+    <div class="bottom-nav-item" onclick="navigate('messages')" data-section="messages" style="color:rgba(255,255,255,0.5)">
+      <div class="bnav-icon">💬</div><div class="bnav-label" style="color:inherit">הודעות</div>
+      <div class="bnav-badge" id="bnMsgBadge" style="display:none">0</div>
     </div>
     <div class="bottom-nav-item" onclick="logout()" style="color:#E05A2B">
       <div class="bnav-icon">🚪</div><div class="bnav-label" style="color:inherit">יציאה</div>
