@@ -8,57 +8,39 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, {
+  cors: { origin: '*' }
+});
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-mongoose.connect(process.env.MONGODB_URI)
-  .then(async () => {
-    console.log('✅ MongoDB מחובר');
-    try {
-      const User = require('./models/User');
-      const existing = await User.findOne({ role: 'admin' });
-      if (!existing) {
-        // משתמשים ב-User.create כדי שה-pre-save יצפין את הסיסמה פעם אחת בלבד
-        await User.create({
-          role: 'admin',
-          email: 'lkapuna@gmail.com',
-          password: 'Admin1234!', // גולמית — ה-model יצפין אוטומטית
-          phone: '0500000000',
-          isActive: true
-        });
-        console.log('✅ אדמין נוצר: lkapuna@gmail.com / Admin1234!');
-      } else {
-        console.log('✅ אדמין קיים במערכת');
-      }
-    } catch(e) {
-      console.error('שגיאה ביצירת אדמין:', e.message);
-    }
-  })
-  .catch(err => console.error('❌ שגיאת MongoDB:', err));
+if (process.env.MONGODB_URI) {
+  mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('MongoDB connected'))
+    .catch(err => console.error('MongoDB connection error:', err));
+} else {
+  console.warn('MONGODB_URI is not set. Configure it in Render before using the app.');
+}
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/admin', require('./routes/admin'));
-app.use('/api/chat', require('./routes/chat'));
+app.use('/api/recruitment', require('./routes/recruitment'));
 
-io.on('connection', (socket) => {
-  socket.on('join_chat', (chatId) => {
+io.on('connection', socket => {
+  socket.on('join_chat', chatId => {
     socket.join(chatId);
   });
-  socket.on('leave_chat', (chatId) => {
-    socket.leave(chatId);
-  });
-  socket.on('send_message', ({ chatId, message, sender, time }) => {
-    // שלח לכולם בחדר חוץ מהשולח
-    socket.to(chatId).emit('receive_message', {
-      chatId,
-      text: message,
+
+  socket.on('send_message', ({ chatId, message, sender }) => {
+    io.to(chatId).emit('receive_message', {
+      message,
       sender,
-      time: time || new Date().toISOString()
+      time: new Date().toISOString()
     });
   });
 });
@@ -68,4 +50,6 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`🚀 השרת רץ על פורט ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});

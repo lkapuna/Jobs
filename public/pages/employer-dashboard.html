@@ -2,9 +2,8 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="apple-mobile-web-app-title" content="שעתי">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>דשבורד מעסיק — שעתי</title>
+  <title>דשבורד מעסיק — WorkHour</title>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,7 +13,7 @@
       --surface: #ffffff;
       --surface2: #f0ede8;
       --border: rgba(0,0,0,0.08);
-      --accent: #E05A2B;
+      --accent: #c8502a;
       --accent2: #2a6e4e;
       --text: #1a1612;
       --muted: #8a8480;
@@ -26,7 +25,7 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      display: block;
+      display: flex;
     }
 
     /* ── SIDEBAR ── */
@@ -155,7 +154,7 @@
     }
 
     .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: #C44820; transform: translateY(-1px); }
+    .btn-primary:hover { background: #a83e1e; transform: translateY(-1px); }
     .btn-secondary { background: var(--surface2); color: var(--text); }
     .btn-secondary:hover { background: #e5e0d8; }
 
@@ -468,210 +467,24 @@
     .approve-btn.dispute { background: rgba(200,80,42,0.08); color: var(--accent); border-color: rgba(200,80,42,0.2); }
     .approve-btn.cancel { background: var(--bg); color: var(--muted); }
 
-    
-    /* ══════════════════════════════
-       MOBILE-FIRST RESPONSIVE SYSTEM
-       ══════════════════════════════ */
-
-    /* Bottom nav - mobile only */
-    .bottom-nav {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      z-index: 100;
-      padding: 0;
-      padding-bottom: env(safe-area-inset-bottom);
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .sidebar { display: none; }
+      .main { margin-right: 0; }
+      .content { padding: 20px 16px; }
     }
-    .bottom-nav-items {
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-    }
-    .bottom-nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 10px 4px 8px;
-      cursor: pointer;
-      color: var(--muted);
-      font-size: 0.65rem;
-      font-weight: 600;
-      gap: 3px;
-      transition: color 0.2s;
-      position: relative;
-      min-width: 0;
-    }
-    .bottom-nav-item.active { color: var(--accent); }
-    .bottom-nav-item .bnav-icon { font-size: 1.3rem; line-height: 1; }
-    .bottom-nav-item .bnav-label { font-size: 0.6rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 56px; text-align: center; }
-    .bottom-nav-item .bnav-badge {
-      position: absolute;
-      top: 6px;
-      right: 50%;
-      transform: translateX(8px);
-      background: var(--accent);
-      color: #fff;
-      font-size: 0.55rem;
-      font-weight: 900;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* Mobile topbar */
-    .mobile-topbar {
-      display: none; /* מוצג רק במובייל */
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 14px 16px;
-      align-items: center;
-      gap: 12px;
-    }
-    .mobile-logo { font-size: 1.2rem; font-weight: 900; color: #fff; }
-    .mobile-logo span { color: var(--accent); }
-    .mobile-page-title { font-size: 1rem; font-weight: 800; flex: 1; }
-    .mobile-avatar {
-      width: 34px; height: 34px;
-      border-radius: 50%;
-      background: var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 900; font-size: 0.85rem; color: #000;
-      flex-shrink: 0;
-      cursor: pointer;
-    }
-
-    
-
-
-    /* ═══════════════════════════════════════
-       MOBILE FIX — COMPLETE LAYOUT OVERRIDE
-       ═══════════════════════════════════════ */
-    @media (max-width: 768px) {
-      html, body {
-        overflow-x: hidden;
-        width: 100%;
-        max-width: 100vw;
-      }
-      body { display: block !important; }
-
-      /* הסתר sidebar ו-topbar לחלוטין */
-      .sidebar { display: none !important; position: absolute !important; visibility: hidden !important; }
-      .topbar  { display: none !important; }
-
-      /* main תופס כל הרוחב */
-      .main {
-        margin-right: 0 !important;
-        margin-left: 0 !important;
-        width: 100% !important;
-        max-width: 100vw !important;
-        display: flex !important;
-        flex-direction: column !important;
-        min-height: 100vh !important;
-        padding-bottom: 80px !important;
-      }
-
-      /* mobile topbar עליון */
-      .mobile-topbar {
-        display: flex !important;
-        position: sticky;
-        top: 0;
-        z-index: 90;
-        width: 100%;
-      }
-
-      /* bottom nav */
-      .bottom-nav {
-        display: block !important;
-        position: fixed !important;
-        bottom: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
-        z-index: 100 !important;
-      }
-
-      /* content padding */
-      .content { padding: 14px !important; }
-
-      /* סטטיסטיקות 2 בשורה */
-      .stats-grid {
-        grid-template-columns: 1fr 1fr !important;
-        gap: 10px !important;
-      }
-      .stat-card { padding: 14px !important; }
-      .stat-val  { font-size: 1.4rem !important; }
-      .stat-icon { font-size: 1.4rem !important; }
-
-      /* כרטיסי משרות / פאנלים */
-      .jobs-grid  { grid-template-columns: 1fr !important; }
-      .panel { border-radius: 12px !important; }
-      .panel-header { padding: 16px !important; flex-wrap: wrap; gap: 8px; }
-
-      /* טבלאות */
-      table { font-size: 0.78rem !important; }
-      td, th { padding: 8px 10px !important; }
-
-      /* טפסים */
-      .form-row, [style*="grid-template-columns: 1fr 1fr"] {
-        grid-template-columns: 1fr !important;
-      }
-
-      /* modals */
-      .modal-box, .modal {
-        width: calc(100vw - 24px) !important;
-        max-height: 88vh !important;
-        overflow-y: auto !important;
-        margin: 12px !important;
-        border-radius: 16px !important;
-      }
-
-      /* צ'אט */
-      .chat-overlay {
-        align-items: flex-end !important;
-        justify-content: center !important;
-        padding: 0 !important;
-      }
-      .chat-box {
-        width: 100vw !important;
-        height: 92vh !important;
-        height: 92dvh !important;
-        border-radius: 20px 20px 0 0 !important;
-      }
-    }
-
   </style>
-<script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
 <!-- SIDEBAR -->
-
-<div class="mobile-topbar" style="background:var(--text);border-bottom:1px solid rgba(255,255,255,0.1)">
-  <div class="mobile-logo" style="color:#fff">שע<span style="color:var(--accent)">תי</span></div>
-  <div class="mobile-page-title" id="mobilePageTitle" style="color:#fff">סקירה כללית</div>
-  <button id="mPostJobBtn" onclick="openPostJob()" style="display:none;padding:8px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:Heebo,sans-serif;font-weight:700;font-size:0.82rem;cursor:pointer">+ משרה</button>
-  <div class="mobile-avatar" id="mobileAvatar" onclick="navigate('profile')" style="background:var(--accent);color:#fff">מ</div>
-</div>
-
 <aside class="sidebar">
   <div class="sidebar-logo">
-    <div class="logo-text">שע<span>תי</span></div>
+    <div class="logo-text">Work<span>Hour</span></div>
     <div class="logo-sub">פאנל מעסיק</div>
   </div>
 
   <nav class="sidebar-nav">
-    <div class="nav-item" onclick="navigate('profile')"><span class="icon">👤</span> פרטי העסק</div>
     <div class="nav-item active" onclick="navigate('overview')">
       <span class="icon">📊</span> סקירה כללית
     </div>
@@ -686,7 +499,6 @@
       <span class="icon">⏱️</span> אישור שעות
       <span class="nav-badge" id="sessionBadge" style="display:none">0</span>
     </div>
-    <div class="nav-item" onclick="navigate('payments')"><span class="icon">💳</span> תשלומים</div>
     <div class="nav-item" onclick="navigate('history')">
       <span class="icon">📋</span> היסטוריה
     </div>
@@ -719,86 +531,6 @@
 
   <div class="content">
 
-
-    <!-- PROFILE SECTION -->
-    <div class="section" id="section-profile">
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">עריכת פרטי העסק שלי</span></div>
-        <div style="padding:32px;max-width:560px">
-          <form id="profileForm">
-            <div style="margin-bottom:16px">
-              <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em">שם העסק</label>
-              <input id="pBusinessName" type="text" style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none">
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-              <div>
-                <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">טלפון</label>
-                <input id="pPhone" type="tel" style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none">
-              </div>
-              <div>
-                <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">אזור</label>
-                <input id="pArea" type="text" placeholder="תל אביב, ירושלים..." style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none">
-              </div>
-            </div>
-            <div style="margin-bottom:16px">
-              <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">כתובת העסק</label>
-              <input id="pAddress" type="text" style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none">
-            </div>
-            <div style="margin-bottom:24px">
-              <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">אודות העסק</label>
-              <textarea id="pAbout" style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none;resize:vertical;min-height:80px" placeholder="תאר את העסק שלך..."></textarea>
-            </div>
-            <div style="margin-bottom:24px">
-              <label style="display:block;font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase">סיסמה חדשה (אופציונלי)</label>
-              <input id="pPassword" type="password" placeholder="השאר ריק לא לשנות" style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:Heebo,sans-serif;font-size:0.92rem;outline:none">
-            </div>
-            <button type="submit" class="btn btn-primary" style="padding:13px 32px;font-size:1rem">שמור שינויים</button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-
-    <!-- PAYMENTS SECTION -->
-    <div class="section" id="section-payments">
-      <div class="stats-grid" id="payStatsGrid" style="margin-bottom:20px">
-        <div class="loading"><div class="spinner"></div></div>
-      </div>
-      <div class="panel" style="margin-bottom:20px">
-        <div class="panel-header">
-          <span class="panel-title">💳 העברת תשלום לאפליקציה</span>
-        </div>
-        <div style="padding:24px;max-width:500px">
-          <div style="background:var(--surface2);border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid var(--border)">
-            <div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;font-weight:600">פרטי חשבון בנק</div>
-            <div style="font-size:1rem;font-weight:700;margin-bottom:4px">שעתי בע"מ</div>
-            <div style="font-size:0.9rem;color:var(--muted)">בנק הפועלים · סניף 508 · חשבון 123456</div>
-            <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
-            <div style="font-size:0.82rem;color:var(--muted)">יש לציין בהעברה: מס' חשבון + שם העסק</div>
-          </div>
-          <div style="background:rgba(200,80,42,0.08);border:1px solid rgba(200,80,42,0.2);border-radius:12px;padding:16px;font-size:0.85rem;line-height:1.6;color:var(--text)">
-            📅 <strong>מועד תשלום:</strong> כל יום ראשון עד 12:00<br>
-            🧾 <strong>חשבונית:</strong> תשלח אוטומטית לאחר קבלת התשלום<br>
-            💰 <strong>סכום:</strong> לפי דוח השעות שנשלח אליך
-          </div>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">היסטוריית תשלומים ושעות</span>
-          <button class="btn btn-secondary" onclick="downloadExcel('employer')" style="display:flex;align-items:center;gap:6px">
-            📥 הורד Excel
-          </button>
-        </div>
-        <div id="payHistoryTable"><div class="loading"><div class="spinner"></div></div></div>
-      </div>
-      <div class="panel" style="margin-top:20px">
-        <div class="panel-header">
-          <span class="panel-title">📄 חשבוניות שהתקבלו</span>
-        </div>
-        <div id="invoicesList"><div class="loading"><div class="spinner"></div></div></div>
-      </div>
-    </div>
     <!-- OVERVIEW -->
     <div class="section active" id="section-overview">
       <div class="stats-grid" id="statsGrid">
@@ -954,8 +686,6 @@
   // שם המעסיק
   document.getElementById('empName').textContent = user.name || 'מעסיק';
   document.getElementById('empInitial').textContent = (user.name || 'מ')[0];
-  const mAvatar = document.getElementById('mobileAvatar');
-  if (mAvatar) mAvatar.textContent = (user.name || 'מ')[0];
 
   const headers = () => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` });
   const fmt = n => new Intl.NumberFormat('he-IL').format(Math.round(n || 0));
@@ -966,12 +696,10 @@
   let currentSessionId = null;
 
   const pageMeta = {
-    profile:    { title: 'פרטי העסק', sub: 'עריכת פרטי העסק שלך', btn: false },
     overview:   { title: 'סקירה כללית', sub: 'ברוך הבא לפאנל המעסיק', btn: false },
     jobs:       { title: 'המשרות שלי', sub: 'ניהול משרות שפרסמת', btn: true },
     applicants: { title: 'מועמדים', sub: 'עובדים שפנו למשרות שלך', btn: false },
     sessions:   { title: 'אישור שעות', sub: 'משמרות הממתינות לאישורך', btn: false },
-    payments:   { title: 'תשלומים', sub: 'ניהול תשלומים וחשבוניות', btn: false },
     history:    { title: 'היסטוריה', sub: 'כל המשמרות שאושרו', btn: false },
   };
 
@@ -985,17 +713,7 @@
     document.getElementById('pageTitle').textContent = meta.title;
     document.getElementById('pageSub').textContent = meta.sub;
     document.getElementById('postJobBtn').style.display = meta.btn ? 'block' : 'none';
-    const mPostBtn = document.getElementById('mPostJobBtn');
-    if (mPostBtn) mPostBtn.style.display = meta.btn ? 'block' : 'none';
-    const mTitle = document.getElementById('mobilePageTitle');
-    if (mTitle) mTitle.textContent = meta.title;
-    document.querySelectorAll('.bottom-nav-item').forEach(el => {
-      const isActive = el.dataset.section === section;
-      el.classList.toggle('active', isActive);
-      el.style.color = isActive ? 'var(--accent)' : 'rgba(255,255,255,0.5)';
-    });
     loadSection(section);
-    window.scrollTo(0, 0);
   }
 
   function refreshCurrent() { loadSection(currentSection); }
@@ -1006,8 +724,6 @@
     else if (s === 'applicants') loadApplicants();
     else if (s === 'sessions') loadSessions();
     else if (s === 'history') loadHistory();
-    else if (s === 'payments') loadPayments();
-    else if (s === 'profile') loadProfile();
   }
 
   function showToast(msg, type = 'success') {
@@ -1148,9 +864,7 @@
             ${a.status === 'pending' ? `
               <button class="btn-sm btn-sm-success" onclick="updateApplicant('${a.jobId}', '${a.worker?._id}', 'interested')">✓ מעוניין</button>
               <button class="btn-sm btn-sm-danger" onclick="updateApplicant('${a.jobId}', '${a.worker?._id}', 'rejected')">✕ דחה</button>
-            ` : `
-              <button class="btn-chat" onclick="openChat('${a.jobId}_${a.worker?._id}', '${(a.worker?.firstName||'') + ' ' + (a.worker?.lastName||'')}', '${a.jobTitle}')">💬 צ'אט</button>
-            `}
+            ` : ''}
           </div>
         </div>
       `).join('') : '<div class="empty-state"><div class="empty-icon">👥</div><p>אין מועמדים עדיין</p></div>';
@@ -1253,7 +967,7 @@
           area: document.getElementById('j_area').value,
           address: document.getElementById('j_address').value,
           hourlyRate: Number(document.getElementById('j_rate').value),
-          jobType: [...document.querySelectorAll('#j_types input:checked')].map(c=>c.value).join(', ') || 'זמנית',
+          jobType: document.getElementById('j_type').value,
           profession: document.getElementById('j_profession').value,
           hours: document.getElementById('j_hours').value,
           days: document.getElementById('j_days').value.split(',').map(d => d.trim()),
@@ -1319,408 +1033,13 @@
     } catch(e) { showToast('שגיאה', 'error'); }
   }
 
-  // ── INBOX ──
-  async function loadInbox() {
-    const box = document.getElementById('inboxList');
-    box.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">טוען שיחות...</div>';
-    try {
-      const res = await fetch('/api/chat/my-conversations', { headers: headers() });
-      if (!res.ok) throw new Error();
-      const convs = await res.json();
-      if (!convs.length) {
-        box.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">אין שיחות עדיין</div>';
-        return;
-      }
-      box.innerHTML = convs.map(conv => {
-        const name = conv.otherName || 'שיחה';
-        const lastMsg = conv.lastMessage || '';
-        const unread = conv.unread || 0;
-        const initial = name[0] || '?';
-        return `<div onclick="openChat('${conv.chatId}', '${name}', '')" style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border-radius:14px;cursor:pointer;border:1px solid var(--border)">
-          <div style="width:42px;height:42px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1rem;color:#fff;flex-shrink:0">${initial}</div>
-          <div style="flex:1;overflow:hidden">
-            <div style="font-weight:700;font-size:0.95rem">${name}</div>
-            <div style="font-size:0.82rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastMsg}</div>
-          </div>
-          ${unread ? `<div style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;font-size:0.7rem;font-weight:900;display:flex;align-items:center;justify-content:center">${unread}</div>` : ''}
-        </div>`;
-      }).join('');
-    } catch(e) {
-      box.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">שגיאה בטעינת שיחות</div>';
-    }
-  }
-
   function logout() {
     localStorage.clear();
     window.location = '/pages/login.html';
   }
 
-  // ── PROFILE ──
-  async function loadProfile() {
-    const cached = JSON.parse(localStorage.getItem('user') || '{}');
-    const fill = u => {
-      if(document.getElementById('pBusinessName')) document.getElementById('pBusinessName').value = u.businessName||u.name||'';
-      if(document.getElementById('pPhone')) document.getElementById('pPhone').value = u.phone||'';
-      if(document.getElementById('pArea')) document.getElementById('pArea').value = u.area||'';
-      if(document.getElementById('pAddress')) document.getElementById('pAddress').value = u.address||'';
-      if(document.getElementById('pAbout')) document.getElementById('pAbout').value = u.about||'';
-    };
-    fill(cached);
-    try {
-      const res = await fetch(`${API}/api/auth/me`, { headers: headers() });
-      if(res.ok){ const u=await res.json(); fill(u); localStorage.setItem('user',JSON.stringify({...cached,...u})); }
-    } catch(e) {}
-  }
-
-  document.getElementById('profileForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const body = {
-      businessName: document.getElementById('pBusinessName').value,
-      phone: document.getElementById('pPhone').value,
-      area: document.getElementById('pArea').value,
-      address: document.getElementById('pAddress').value,
-      about: document.getElementById('pAbout').value,
-    };
-    const pwd = document.getElementById('pPassword').value;
-    if (pwd) body.password = pwd;
-    try {
-      const res = await fetch(`${API}/api/auth/profile`, { method:'PATCH', headers:headers(), body:JSON.stringify(body) });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      localStorage.setItem('user', JSON.stringify({...user, ...updated}));
-      document.getElementById('empName').textContent = updated.businessName || user.name;
-      showToast('הפרטים עודכנו בהצלחה ✓');
-    } catch(e) { showToast('שגיאה בשמירה', 'error'); }
-  });
-
-
-  // ── PAYMENTS ──
-  async function loadPayments() {
-    try {
-      const res = await fetch(`${API}/api/sessions/employer/history`, { headers: headers() });
-      const sessions = res.ok ? await res.json() : [];
-      const approved = sessions.filter(s => s.status === 'approved');
-      const totalCost = approved.reduce((s,x) => s + (x.totalEmployerCost||0), 0);
-      const totalHours = approved.reduce((s,x) => s + (x.totalHours||0), 0);
-
-      document.getElementById('payStatsGrid').innerHTML = `
-        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val accent">₪${fmt(totalCost)}</div><div class="stat-label">סה"כ שולם</div></div>
-        <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-val">${totalHours.toFixed(1)}</div><div class="stat-label">סה"כ שעות</div></div>
-        <div class="stat-card"><div class="stat-icon">👷</div><div class="stat-val">${new Set(approved.map(s=>s.worker?._id)).size}</div><div class="stat-label">עובדים שונים</div></div>
-        <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-val">${approved.length}</div><div class="stat-label">משמרות</div></div>
-      `;
-
-      document.getElementById('payHistoryTable').innerHTML = approved.length ? `
-        <table style="width:100%;border-collapse:collapse">
-          <thead><tr style="background:var(--bg)">
-            <th style="padding:12px 20px;text-align:right;font-size:0.75rem;color:var(--muted);font-weight:700">עובד</th>
-            <th style="padding:12px 20px;text-align:right;font-size:0.75rem;color:var(--muted);font-weight:700">תאריך</th>
-            <th style="padding:12px 20px;text-align:right;font-size:0.75rem;color:var(--muted);font-weight:700">שעות</th>
-            <th style="padding:12px 20px;text-align:right;font-size:0.75rem;color:var(--muted);font-weight:700">שכר עובד</th>
-            <th style="padding:12px 20px;text-align:right;font-size:0.75rem;color:var(--muted);font-weight:700">עמלה</th>
-            <th style="padding:12px 20px;text-align:right;font-size:0.75rem;color:var(--muted);font-weight:700">סה"כ</th>
-          </tr></thead>
-          <tbody>
-            ${approved.map(s => `
-              <tr style="border-top:1px solid var(--border)">
-                <td style="padding:14px 20px;font-weight:600">${s.worker?.firstName||''} ${s.worker?.lastName||''}</td>
-                <td style="padding:14px 20px;color:var(--muted);font-size:0.85rem">${fmtDate(s.date)}</td>
-                <td style="padding:14px 20px;font-weight:700">${s.totalHours}h</td>
-                <td style="padding:14px 20px">₪${fmt(s.grossPay)}</td>
-                <td style="padding:14px 20px;color:var(--accent)">₪${fmt(s.employerFee)}</td>
-                <td style="padding:14px 20px;font-weight:800;color:var(--accent)">₪${fmt(s.totalEmployerCost)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      ` : '<div class="empty-state"><div class="empty-icon">📋</div><p>אין היסטוריית תשלומים</p></div>';
-
-      // חשבוניות (מהאדמין)
-      document.getElementById('invoicesList').innerHTML = `
-        <div style="padding:24px;color:var(--muted);font-size:0.9rem;text-align:center">
-          <div style="font-size:2rem;margin-bottom:8px">🧾</div>
-          חשבוניות שנשלחות מהאדמין יופיעו כאן
-        </div>
-      `;
-    } catch(e) {
-      document.getElementById('payStatsGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>שגיאה</p></div>';
-    }
-  }
-
-  // ── EXCEL DOWNLOAD ──
-  async function downloadExcel(type) {
-    try {
-      showToast('מכין קובץ Excel...');
-      const res = await fetch(`${API}/api/sessions/employer/history`, { headers: headers() });
-      const sessions = res.ok ? await res.json() : [];
-
-      // בנה CSV ותמיר ל-Excel-compatible
-      const rows = [['עובד','תאריך','שעת התחלה','שעת סיום','שעות','שכר גולמי','עמלה','סה"כ','סטטוס']];
-      sessions.forEach(s => {
-        rows.push([
-          `${s.worker?.firstName||''} ${s.worker?.lastName||''}`,
-          fmtDate(s.date),
-          s.startTime ? fmtTime(new Date(s.startTime)) : '',
-          s.endTime ? fmtTime(new Date(s.endTime)) : '',
-          s.totalHours,
-          s.grossPay,
-          s.employerFee,
-          s.totalEmployerCost,
-          s.status === 'approved' ? 'מאושר' : s.status
-        ]);
-      });
-
-      const csv = '\uFEFF' + rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `דוח_שעות_${user.businessName||'מעסיק'}_${new Date().toLocaleDateString('he-IL').replace(/\//g,'-')}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('הקובץ הורד בהצלחה ✓');
-    } catch(e) { showToast('שגיאה בהורדה', 'error'); }
-  }
-
   // Init
   loadOverview();
 </script>
-<!-- CHAT COMPONENT - להוסיף לשני הדשבורדים -->
-<!-- סגנונות צ'אט -->
-<style>
-  .chat-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:300; display:none; align-items:flex-end; justify-content:flex-end; padding:20px; }
-  .chat-overlay.open { display:flex; }
-  .chat-box { width:380px; height:520px; background:#111827; border:1px solid rgba(255,255,255,0.1); border-radius:20px; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden; }
-  .chat-header { padding:16px 20px; background:#0d1520; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; gap:12px; }
-  .chat-avatar { width:38px; height:38px; border-radius:50%; background:#E05A2B; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:0.95rem; color:#fff; flex-shrink:0; }
-  .chat-name { font-weight:700; font-size:0.95rem; color:#f0ede8; }
-  .chat-job { font-size:0.75rem; color:rgba(240,237,232,0.4); margin-top:2px; }
-  .chat-back-btn { display:flex; align-items:center; gap:8px; padding:12px 16px; background:none; border:none; border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; width:100%; color:#f0ede8; font-family:Heebo,sans-serif; font-size:0.85rem; }
-  .chat-back-btn:hover { background:rgba(255,255,255,0.04); }
-  .chat-close { display:flex; align-items:center; justify-content:center; width:44px; height:44px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15); border-radius:50%; color:#fff; font-size:1.1rem; font-weight:700; cursor:pointer; margin-right:auto; flex-shrink:0; }
-  .chat-close:hover { background:rgba(255,255,255,0.18); }
-  .chat-messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; background:#111827; }
-  .chat-messages::-webkit-scrollbar { width:4px; }
-  .chat-messages::-webkit-scrollbar-track { background:transparent; }
-  .chat-messages::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
-  .msg { max-width:75%; display:flex; flex-direction:column; }
-  .msg.mine { align-self:flex-start; }
-  .msg.theirs { align-self:flex-end; }
-  .msg-bubble { padding:10px 14px; border-radius:16px; font-size:0.88rem; line-height:1.4; }
-  .msg.mine .msg-bubble { background:#E05A2B; color:#fff; border-bottom-right-radius:4px; }
-  .msg.theirs .msg-bubble { background:#1e3a5f; color:#f0ede8; border-bottom-left-radius:4px; }
-  .msg-time { font-size:0.68rem; color:rgba(240,237,232,0.3); margin-top:4px; padding:0 4px; }
-  .msg.mine .msg-time { text-align:right; }
-  .chat-input-row { padding:14px 16px; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:8px; align-items:flex-end; background:#0d1520; }
-  .chat-input { flex:1; background:#1a2535; border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:10px 14px; color:#f5f0eb; font-family:'Heebo',sans-serif; font-size:0.9rem; outline:none; resize:none; max-height:100px; min-height:40px; transition:border-color 0.2s; }
-  .chat-input:focus { border-color:#E05A2B; }
-  .chat-input::placeholder { color:rgba(240,237,232,0.35); }
-  .chat-send { width:40px; height:40px; border-radius:12px; background:#E05A2B; border:none; color:#fff; font-size:1.1rem; cursor:pointer; transition:all 0.2s; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-  .chat-send:hover { background:#C44820; transform:scale(1.05); }
-  .chat-empty { text-align:center; color:rgba(240,237,232,0.3); font-size:0.85rem; margin:auto; }
-  .chat-loading { text-align:center; padding:20px; color:rgba(240,237,232,0.3); }
-  
-  /* כפתור פתיחת צ'אט במועמד */
-  .btn-chat { border:1px solid rgba(0,200,150,0.3); color:#E05A2B; background:rgba(0,200,150,0.08); padding:7px 14px; border-radius:8px; font-family:'Heebo',sans-serif; font-size:0.8rem; font-weight:700; cursor:pointer; transition:all 0.15s; }
-  .btn-chat:hover { background:rgba(0,200,150,0.15); }
-  .chat-unread { display:inline-block; background:#E05A2B; color:#000; border-radius:50%; width:18px; height:18px; font-size:0.65rem; font-weight:900; text-align:center; line-height:18px; margin-right:4px; }
-</style>
-
-<!-- MESSAGES SECTION -->
-<div class="section" id="section-messages">
-  <div class="page-header"><h2>הודעות</h2><p>כל השיחות שלך</p></div>
-  <div id="inboxList" style="display:flex;flex-direction:column;gap:10px;padding:16px"></div>
-</div>
-
-<!-- תיבת הצ'אט -->
-<div class="chat-overlay" id="chatOverlay" onclick="closeChat()">
-  <div class="chat-box" onclick="event.stopPropagation()">
-    <div class="chat-header" style="flex-direction:column;padding:0;align-items:stretch">
-      <button onclick="closeChat()" style="display:flex;align-items:center;gap:10px;padding:16px 16px;min-height:52px;background:rgba(255,255,255,0.04);border:none;border-bottom:1.5px solid rgba(255,255,255,0.1);cursor:pointer;color:rgba(240,237,232,0.85);font-family:Heebo,sans-serif;font-size:0.9rem;font-weight:600;text-align:right;width:100%;-webkit-tap-highlight-color:rgba(255,255,255,0.1)">
-        <span style="font-size:1.4rem;color:#fff;font-weight:700">←</span> חזור
-      </button>
-      <div style="display:flex;align-items:center;gap:10px;padding:11px 16px">
-        <div class="chat-avatar" id="chatAvatar">?</div>
-        <div>
-          <div class="chat-name" id="chatName">שיחה</div>
-          <div class="chat-job" id="chatJobName"></div>
-        </div>
-      </div>
-    </div>
-    <div class="chat-messages" id="chatMessages">
-      <div class="chat-loading">טוען הודעות...</div>
-    </div>
-    <div class="chat-input-row">
-      <textarea class="chat-input" id="chatInput" placeholder="כתוב הודעה..." rows="1"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
-        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-      <button class="chat-send" onclick="sendMessage()">➤</button>
-    </div>
-  </div>
-</div>
-
-<script>
-  let currentChatId = null;
-  let chatSocket = null;
-  let currentChatOtherName = '';
-
-  function openChat(chatId, otherName, jobTitle) {
-    currentChatId = chatId;
-    currentChatOtherName = otherName;
-    document.getElementById('chatAvatar').textContent = otherName[0] || '?';
-    document.getElementById('chatName').textContent = otherName;
-    document.getElementById('chatJobName').textContent = jobTitle || '';
-    document.getElementById('chatOverlay').classList.add('open');
-    loadMessages();
-    connectChatSocket(chatId);
-  }
-
-  function closeChat() {
-    document.getElementById('chatOverlay').classList.remove('open');
-    currentChatId = null;
-    if (chatSocket) { chatSocket.emit('leave_chat', currentChatId); }
-  }
-
-  function connectChatSocket(chatId) {
-    if (typeof io === 'undefined') return;
-    if (!chatSocket) chatSocket = io();
-    chatSocket.emit('join_chat', chatId);
-    chatSocket.off('receive_message');
-    chatSocket.on('receive_message', (msg) => {
-      if (msg.chatId === chatId) appendMessage(msg, false);
-    });
-  }
-
-  async function loadMessages() {
-    document.getElementById('chatMessages').innerHTML = '<div class="chat-loading">טוען...</div>';
-    try {
-      const res = await fetch(`/api/chat/${currentChatId}`, { headers: headers() });
-      const msgs = res.ok ? await res.json() : [];
-      const container = document.getElementById('chatMessages');
-      if (!msgs.length) {
-        container.innerHTML = '<div class="chat-empty">אין הודעות עדיין<br>התחל את השיחה 👋</div>';
-        return;
-      }
-      container.innerHTML = '';
-      msgs.forEach(m => appendMessage({
-        text: m.text,
-        sender: m.sender?._id || m.sender,
-        senderName: m.sender?.firstName || m.sender?.businessName || '',
-        time: m.createdAt,
-        chatId: currentChatId
-      }, true));
-      scrollToBottom();
-    } catch(e) {
-      document.getElementById('chatMessages').innerHTML = '<div class="chat-empty">שגיאה בטעינה</div>';
-    }
-  }
-
-  function appendMessage(msg, skipScroll) {
-    const myId = user._id || user.id;
-    const isMine = msg.sender === myId || msg.sender?._id === myId;
-    const container = document.getElementById('chatMessages');
-    
-    // הסר empty state
-    const empty = container.querySelector('.chat-empty, .chat-loading');
-    if (empty) empty.remove();
-
-    const time = msg.time ? new Date(msg.time).toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'}) : '';
-    const div = document.createElement('div');
-    div.className = `msg ${isMine ? 'mine' : 'theirs'}`;
-    div.innerHTML = `<div class="msg-bubble">${escHtml(msg.text)}</div><div class="msg-time">${time}</div>`;
-    container.appendChild(div);
-    if (!skipScroll) scrollToBottom();
-  }
-
-  function scrollToBottom() {
-    const c = document.getElementById('chatMessages');
-    c.scrollTop = c.scrollHeight;
-  }
-
-  const PHONE_PATTERN = /(?:\d[\s\-.]?){9,}|מה.*?(?:טלפון|מספר|נייד)|(?:טלפון|מספר|נייד).*?שלך|צור.*?קשר.*?(?:ישיר|מחוץ)/i;
-
-  async function sendMessage() {
-    const input = document.getElementById('chatInput');
-    const text = input.value.trim();
-    if (!text || !currentChatId) return;
-    if (PHONE_PATTERN.test(text)) {
-      if (!confirm('⚠️ נראה שאתה מנסה לשתף מספר טלפון או ליצור קשר מחוץ לאפליקציה.\n\nכל העסקאות חייבות להתבצע דרך שעתי בלבד.\n\nלחץ אישור רק אם ההודעה לא קשורה לזה.')) return;
-    }
-    input.value = '';
-    input.style.height = 'auto';
-
-    try {
-      const res = await fetch(`/api/chat/${currentChatId}`, {
-        method: 'POST', headers: headers(),
-        body: JSON.stringify({ text })
-      });
-      if (!res.ok) throw new Error();
-      const msg = await res.json();
-      
-      // שלח דרך socket לצד השני
-      if (chatSocket) {
-        chatSocket.emit('send_message', {
-          chatId: currentChatId,
-          message: text,
-          sender: user._id || user.id,
-          time: new Date().toISOString()
-        });
-      }
-      
-      appendMessage({
-        text: msg.text,
-        sender: user._id || user.id,
-        time: msg.createdAt,
-        chatId: currentChatId
-      }, false);
-    } catch(e) { showToast('שגיאה בשליחה', 'error'); }
-  }
-
-  function escHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-  }
-
-  // סגירה בלחיצה על הרקע
-  document.getElementById('chatOverlay').addEventListener('click', function(e) {
-    if (e.target === this) closeChat();
-  });
-</script>
-
-<nav class="bottom-nav" style="background:#1a1612;border-top:1px solid rgba(255,255,255,0.1)">
-  <div class="bottom-nav-items" id="bottomNavItems">
-    <div class="bottom-nav-item active" onclick="navigate('overview')" data-section="overview" style="color:rgba(255,255,255,0.5)">
-      <div class="bnav-icon">📊</div><div class="bnav-label" style="color:inherit">ראשי</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('jobs')" data-section="jobs" style="color:rgba(255,255,255,0.5)">
-      <div class="bnav-icon">💼</div><div class="bnav-label" style="color:inherit">משרות</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('applicants')" data-section="applicants" style="color:rgba(255,255,255,0.5)">
-      <div class="bnav-icon">👥</div><div class="bnav-label" style="color:inherit">מועמדים</div>
-      <div class="bnav-badge" id="bnAppBadge" style="display:none">0</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('sessions')" data-section="sessions" style="color:rgba(255,255,255,0.5)">
-      <div class="bnav-icon">⏱️</div><div class="bnav-label" style="color:inherit">שעות</div>
-      <div class="bnav-badge" id="bnSessBadge" style="display:none">0</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('payments')" data-section="payments" style="color:rgba(255,255,255,0.5)">
-      <div class="bnav-icon">💳</div><div class="bnav-label" style="color:inherit">תשלומים</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('profile')" data-section="profile" style="color:rgba(255,255,255,0.5)">
-      <div class="bnav-icon">👤</div><div class="bnav-label" style="color:inherit">פרופיל</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('messages')" data-section="messages" style="color:rgba(255,255,255,0.5)">
-      <div class="bnav-icon">💬</div><div class="bnav-label" style="color:inherit">הודעות</div>
-      <div class="bnav-badge" id="bnMsgBadge" style="display:none">0</div>
-    </div>
-    <div class="bottom-nav-item" onclick="navigate('messages')" data-section="messages" style="color:rgba(255,255,255,0.5)">
-      <div class="bnav-icon">💬</div><div class="bnav-label" style="color:inherit">הודעות</div>
-      <div class="bnav-badge" id="bnMsgBadge" style="display:none">0</div>
-    </div>
-    <div class="bottom-nav-item" onclick="logout()" style="color:#E05A2B">
-      <div class="bnav-icon">🚪</div><div class="bnav-label" style="color:inherit">יציאה</div>
-    </div>
-  </div>
-</nav>
-
 </body>
 </html>
