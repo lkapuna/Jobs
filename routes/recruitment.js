@@ -180,7 +180,7 @@ router.post('/public/apply', upload.single('cv'), async (req, res) => {
     await candidate.save();
 
     await sendMail({
-      to: process.env.ADMIN_EMAIL || 'lkapuna@gmail.com',
+      to: process.env.ADMIN_EMAIL || 'alef.shin.jobs@gmail.com',
       subject: `New candidate for ${job.title}`,
       text: [
         `New application for: ${job.title}`,
@@ -378,8 +378,13 @@ router.post('/admin/candidates/:id/send-to-employer', ...adminOnly, async (req, 
       .map(note => `- ${note.type}: ${note.text}`)
       .join('\n');
 
+    const hideEmployerRecipient = process.env.HIDE_EMPLOYER_RECIPIENT === 'true';
+    const visibleRecipient = process.env.MAIL_VISIBLE_TO || process.env.SMTP_USER;
+
     await sendMail({
-      to: employerEmail,
+      to: hideEmployerRecipient ? visibleRecipient : employerEmail,
+      bcc: hideEmployerRecipient ? employerEmail : undefined,
+      replyTo: process.env.MAIL_REPLY_TO || undefined,
       subject: `Candidate details: ${candidate.fullName}`,
       text: [
         req.body.message || 'Hello, sending candidate details for your review.',
