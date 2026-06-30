@@ -1,6 +1,6 @@
 {
   "name": "workhour",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "פלטפורמה לעבודות לפי שעות",
   "main": "server.js",
   "scripts": {

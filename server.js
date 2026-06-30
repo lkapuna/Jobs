@@ -31,6 +31,10 @@ app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/recruitment', require('./routes/recruitment'));
 
+app.get('/api/version', (req, res) => {
+  res.json({ version: require('./package.json').version });
+});
+
 io.on('connection', socket => {
   socket.on('join_chat', chatId => {
     socket.join(chatId);

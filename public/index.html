@@ -48,6 +48,16 @@
     }
     .brand span { color: var(--accent); }
     .top-actions { display: flex; gap: 10px; align-items: center; }
+    .version-chip {
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      direction: ltr;
+    }
     a.btn, button {
       font-family: inherit;
       border: 1px solid var(--line);
@@ -237,6 +247,7 @@
     <div class="bar">
       <div class="brand">Jobs<span>CRM</span></div>
       <div class="top-actions">
+        <span class="version-chip">v1.1.0</span>
         <a class="btn" href="/pages/login.html">כניסת אדמין</a>
       </div>
     </div>
