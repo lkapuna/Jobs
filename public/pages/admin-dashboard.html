@@ -243,6 +243,27 @@
       display: none;
     }
     .inline-status.show { display: block; }
+    .signed-agreement {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      line-height: 1.8;
+    }
+    .signed-agreement pre {
+      white-space: pre-wrap;
+      font-family: Heebo, Arial, sans-serif;
+      margin: 0;
+    }
+    .signature-preview {
+      max-width: 360px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+      margin-top: 10px;
+    }
     .site-footer {
       margin-top: 18px;
       border-top: 1px solid var(--line);
@@ -282,7 +303,7 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.2.2</div>
+      <div class="version-chip">v1.2.4</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
@@ -371,7 +392,7 @@
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.2.2 · L.K Consulting</footer>
+      <footer class="site-footer">v1.2.4 · L.K Consulting</footer>
     </main>
   </div>
 
@@ -380,6 +401,7 @@
   <div class="modal" id="jobCandidatesModal"></div>
   <div class="modal" id="employerModal"></div>
   <div class="modal" id="agreementModal"></div>
+  <div class="modal" id="signedAgreementModal"></div>
   <div class="print-card" id="printCard"></div>
   <div class="toast" id="toast"></div>
 
@@ -891,6 +913,7 @@
             <td><div class="row-actions">
               <button onclick="sendAgreement('${a._id}')">שלח לחתימה</button>
               <button onclick="copyAgreementLink('${a.token}')">העתק קישור</button>
+              ${a.status === 'signed' || a.signedAt ? `<button class="blue" onclick="openSignedAgreement('${a._id}')">הצג חתום</button>` : ''}
               ${a.candidate?._id ? `<button onclick="openCandidate('${a.candidate._id}')">פתח מועמד</button>` : ''}
               <button class="blue" onclick="markStartedWork('${a._id}')">העובד התחיל לעבוד</button>
               <button class="blue" onclick="markAgreementPaid('${a._id}', ${Number(a.placementFee || 0)})">סמן כשולם</button>
@@ -976,7 +999,11 @@
       try {
         const result = await api(`/api/agreements/admin/${id}/send`, { method: 'POST', body: JSON.stringify({}) });
         if (result.link) await copyText(result.link);
-        const message = result.skipped ? 'SMTP לא מוגדר. הקישור הועתק, אפשר לשלוח ידנית.' : 'ההסכם נשלח לחתימה והקישור הועתק.';
+        const message = result.timeout
+          ? 'החיבור למייל נתקע או נחסם. הקישור הועתק, אפשר לשלוח ידנית.'
+          : result.skipped
+            ? 'SMTP לא מוגדר או שהשליחה נכשלה. הקישור הועתק, אפשר לשלוח ידנית.'
+            : 'ההסכם נשלח לחתימה והקישור הועתק.';
         statusBox.textContent = message;
         showToast(message);
         alert(message);
@@ -992,6 +1019,112 @@
       const link = `${location.origin}/pages/sign-agreement.html?token=${token}`;
       await copyText(link);
       showToast('קישור החתימה הועתק');
+    }
+
+    function signedAgreementSummary(a) {
+      return [
+        'הסכם השמה חתום',
+        '',
+        'פרטי העסק',
+        `שם העסק: ${a.businessName || '-'}`,
+        `ח.פ.: ${a.businessId || '-'}`,
+        `כתובת: ${a.businessAddress || '-'}`,
+        `איש קשר: ${a.contactName || '-'}`,
+        `טלפון: ${a.contactPhone || '-'}`,
+        `אימייל: ${a.contactEmail || '-'}`,
+        '',
+        'פרטי המועמד',
+        `שם: ${a.candidateName || '-'}`,
+        `תעודת זהות: ${a.candidateIdentityNumber || '-'}`,
+        `טלפון: ${a.candidatePhone || '-'}`,
+        `תפקיד: ${a.candidateRole || a.jobTitle || '-'}`,
+        `מספר מועמד: ${a.candidateNumber || '-'}`,
+        '',
+        'פרטי ההשמה',
+        `משרה: ${a.jobTitle || '-'}`,
+        `דמי השמה: ₪${Number(a.placementFee || 0).toLocaleString('he-IL')} + מע"מ ${a.vatPercent || 0}%`,
+        `תאריך שליחה: ${fmtDate(a.sentAt)}`,
+        `תאריך חתימה: ${fmtDate(a.signedAt)}`,
+        '',
+        'הצהרת העסק',
+        'העסק מאשר כי פרטי המועמד נמסרו לו על ידי א.ש פרימיום לצורך בחינת העסקתו.',
+        'התשלום יתבצע במועד המוקדם מבין: לאחר 30 ימי עבודה או לאחר קבלת תלוש שכר ראשון.',
+        'העסק מתחייב לעדכן על תחילת העבודה, לא להעביר את פרטי המועמד לצד שלישי, ולשלם את דמי ההשמה בהתאם להסכם.',
+        'אם המועמד יועסק אצל העסק או אצל גורם קשור במהלך 12 חודשים ממועד שליחת פרטיו, ייחשב הדבר כהשמה שבוצעה באמצעות א.ש פרימיום.',
+        '',
+        'פרטי חתימה דיגיטלית',
+        `שם החותם: ${a.signerName || '-'}`,
+        `תפקיד: ${a.signerRole || '-'}`,
+        `טלפון: ${a.signerPhone || '-'}`,
+        `אימייל: ${a.signerEmail || '-'}`,
+        `Signature ID: ${a.signatureId || '-'}`,
+        `IP: ${a.signatureIp || '-'}`,
+        `Browser: ${a.signatureBrowser || '-'}`
+      ].join('\n');
+    }
+
+    function signedAgreementHtml(a) {
+      return `
+        <div class="signed-agreement">
+          <pre>${escapeHtml(signedAgreementSummary(a))}</pre>
+          ${a.signatureDataUrl ? `<div><strong>חתימה</strong><br><img class="signature-preview" src="${a.signatureDataUrl}" alt="חתימה דיגיטלית"></div>` : '<div class="muted">לא נשמרה תמונת חתימה.</div>'}
+        </div>`;
+    }
+
+    function openSignedAgreement(id) {
+      const a = state.agreements.find(x => x._id === id);
+      if (!a) return;
+      const modal = document.getElementById('signedAgreementModal');
+      modal.innerHTML = `
+        <div class="dialog">
+          <div class="dialog-head">
+            <div><strong>הסכם חתום</strong><div class="muted">${escapeHtml(a.businessName || '')} | ${escapeHtml(a.candidateName || '')}</div></div>
+            <button onclick="closeModal('signedAgreementModal')">סגור</button>
+          </div>
+          <div class="dialog-body">
+            ${signedAgreementHtml(a)}
+            <div class="field" style="margin-top:14px">
+              <label>שליחה למייל</label>
+              <input id="signedAgreementEmail" type="email" value="${escapeHtml(a.contactEmail || '')}">
+            </div>
+            <div id="signedAgreementStatus" class="inline-status"></div>
+          </div>
+          <div class="dialog-foot">
+            <button onclick="printSignedAgreement('${a._id}')">הדפס / שמור PDF</button>
+            <button class="primary" onclick="sendSignedAgreement('${a._id}')">שלח הסכם חתום</button>
+          </div>
+        </div>`;
+      modal.classList.add('open');
+    }
+
+    function printSignedAgreement(id) {
+      const a = state.agreements.find(x => x._id === id);
+      if (!a) return;
+      document.getElementById('printCard').innerHTML = signedAgreementHtml(a);
+      window.print();
+    }
+
+    async function sendSignedAgreement(id) {
+      const statusBox = document.getElementById('signedAgreementStatus');
+      statusBox.textContent = 'שולח הסכם חתום...';
+      statusBox.classList.add('show');
+      try {
+        const email = document.getElementById('signedAgreementEmail').value;
+        const result = await api(`/api/agreements/admin/${id}/send-signed`, { method: 'POST', body: JSON.stringify({ email }) });
+        const message = result.timeout
+          ? 'החיבור למייל נתקע או נחסם. ההסכם לא נשלח במייל.'
+          : result.skipped
+            ? 'SMTP לא מוגדר או שהשליחה נכשלה.'
+            : 'ההסכם החתום נשלח במייל.';
+        statusBox.textContent = message;
+        showToast(message);
+        alert(message);
+      } catch (err) {
+        const message = `שליחת ההסכם החתום נכשלה: ${err.message}`;
+        statusBox.textContent = message;
+        showToast(message);
+        alert(message);
+      }
     }
     async function copyText(text) {
       try {

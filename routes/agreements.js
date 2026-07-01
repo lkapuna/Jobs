@@ -16,6 +16,9 @@ function mailTransport() {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
     secure: process.env.SMTP_SECURE === 'true',
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 10000,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
   });
 }
@@ -30,6 +33,17 @@ async function sendMail(options) {
     from: process.env.MAIL_FROM || process.env.SMTP_USER,
     ...options
   });
+}
+
+async function sendMailWithTimeout(options, timeoutMs = 10000) {
+  return Promise.race([
+    sendMail(options),
+    new Promise(resolve => {
+      setTimeout(() => {
+        resolve({ skipped: true, timeout: true, error: 'Email connection timeout' });
+      }, timeoutMs);
+    })
+  ]);
 }
 
 function appBaseUrl(req) {
@@ -60,6 +74,36 @@ function agreementText(agreement) {
     'אם המועמד יועסק אצל העסק או גורם קשור במהלך 12 חודשים ממועד שליחת פרטיו, ייחשב הדבר כהשמה שבוצעה באמצעות א.ש פרימיום.',
     'אם המועמד יסיים את עבודתו בתוך 14 ימים מתחילת עבודתו, ובנסיבות שאינן קשורות לעסק, א.ש פרימיום תאתר מועמד חלופי ללא עלות נוספת.'
   ].join('\n');
+}
+
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+}
+
+function signedAgreementText(agreement) {
+  return [
+    agreementText(agreement),
+    '',
+    'פרטי חתימה דיגיטלית',
+    `שם החותם: ${agreement.signerName || '-'}`,
+    `תפקיד: ${agreement.signerRole || '-'}`,
+    `טלפון: ${agreement.signerPhone || '-'}`,
+    `אימייל: ${agreement.signerEmail || '-'}`,
+    `תאריך חתימה: ${agreement.signedAt ? agreement.signedAt.toLocaleString('he-IL') : '-'}`,
+    `Signature ID: ${agreement.signatureId || '-'}`,
+    `IP: ${agreement.signatureIp || '-'}`,
+    `Browser: ${agreement.signatureBrowser || '-'}`
+  ].join('\n');
+}
+
+function signedAgreementHtml(agreement) {
+  return `
+    <div dir="rtl" style="font-family:Arial,sans-serif;color:#111;line-height:1.7">
+      <h2>הסכם השמה חתום</h2>
+      <pre style="white-space:pre-wrap;font-family:Arial,sans-serif">${escapeHtml(signedAgreementText(agreement))}</pre>
+      ${agreement.signatureDataUrl ? `<h3>חתימה</h3><img src="${escapeHtml(agreement.signatureDataUrl)}" alt="חתימה" style="max-width:360px;border:1px solid #ddd;padding:10px">` : ''}
+    </div>
+  `;
 }
 
 router.get('/admin/stats', ...adminOnly, async (req, res) => {
@@ -165,7 +209,7 @@ router.post('/admin/:id/send', ...adminOnly, async (req, res) => {
     await agreement.save();
 
     const link = `${appBaseUrl(req)}/pages/sign-agreement.html?token=${agreement.token}`;
-    const mailResult = await sendMail({
+    const mailResult = await sendMailWithTimeout({
       to: agreement.contactEmail,
       replyTo: process.env.MAIL_REPLY_TO || process.env.SMTP_USER,
       subject: `הסכם השמה לחתימה - ${agreement.candidateName || agreement.jobTitle}`,
@@ -178,7 +222,13 @@ router.post('/admin/:id/send', ...adminOnly, async (req, res) => {
       ].join('\n')
     });
 
-    res.json({ message: mailResult?.skipped ? 'SMTP is not configured' : 'Agreement sent', link, skipped: !!mailResult?.skipped });
+    res.json({
+      message: mailResult?.timeout ? 'Email timed out' : mailResult?.skipped ? 'SMTP is not configured' : 'Agreement sent',
+      link,
+      skipped: !!mailResult?.skipped,
+      timeout: !!mailResult?.timeout,
+      emailError: mailResult?.error || ''
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Could not send agreement' });
@@ -198,6 +248,35 @@ router.post('/admin/:id/started-work', ...adminOnly, async (req, res) => {
     res.json(agreement);
   } catch (err) {
     res.status(500).json({ error: 'Could not mark started work' });
+  }
+});
+
+router.post('/admin/:id/send-signed', ...adminOnly, async (req, res) => {
+  try {
+    const agreement = await PlacementAgreement.findById(req.params.id);
+    if (!agreement) return res.status(404).json({ error: 'Agreement not found' });
+    if (agreement.status !== 'signed' && !agreement.signedAt) return res.status(400).json({ error: 'Agreement is not signed yet' });
+
+    const to = req.body.email || agreement.contactEmail;
+    if (!to) return res.status(400).json({ error: 'Recipient email is missing' });
+
+    const mailResult = await sendMailWithTimeout({
+      to,
+      replyTo: process.env.MAIL_REPLY_TO || process.env.SMTP_USER,
+      subject: `הסכם השמה חתום - ${agreement.candidateName || agreement.jobTitle || agreement.businessName}`,
+      text: signedAgreementText(agreement),
+      html: signedAgreementHtml(agreement)
+    });
+
+    res.json({
+      message: mailResult?.timeout ? 'Email timed out' : mailResult?.skipped ? 'SMTP is not configured' : 'Signed agreement sent',
+      skipped: !!mailResult?.skipped,
+      timeout: !!mailResult?.timeout,
+      emailError: mailResult?.error || ''
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Could not send signed agreement' });
   }
 });
 
@@ -266,15 +345,17 @@ router.post('/public/:token/sign', async (req, res) => {
 
     const emailResults = { employerSent: false, adminSent: false, errors: [] };
     try {
-      const employerMail = await sendMail({ to: agreement.contactEmail, subject: `הסכם חתום - ${agreement.candidateName}`, text });
+      const employerMail = await sendMailWithTimeout({ to: agreement.contactEmail, subject: `הסכם חתום - ${agreement.candidateName}`, text });
       emailResults.employerSent = !employerMail?.skipped;
+      if (employerMail?.timeout) emailResults.errors.push('Employer email: connection timeout');
     } catch (mailErr) {
       emailResults.errors.push(`Employer email: ${mailErr.message}`);
       console.error('Signed agreement employer email failed:', mailErr);
     }
     try {
-      const adminMail = await sendMail({ to: process.env.ADMIN_EMAIL || 'alef.shin.jobs@gmail.com', subject: `הסכם חתום - ${agreement.candidateName}`, text });
+      const adminMail = await sendMailWithTimeout({ to: process.env.ADMIN_EMAIL || 'alef.shin.jobs@gmail.com', subject: `הסכם חתום - ${agreement.candidateName}`, text });
       emailResults.adminSent = !adminMail?.skipped;
+      if (adminMail?.timeout) emailResults.errors.push('Admin email: connection timeout');
     } catch (mailErr) {
       emailResults.errors.push(`Admin email: ${mailErr.message}`);
       console.error('Signed agreement admin email failed:', mailErr);
