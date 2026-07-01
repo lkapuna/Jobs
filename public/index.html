@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jobs - משרות פתוחות</title>
+  <title>א.ש השמת עובדים - משרות פתוחות</title>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
@@ -45,8 +45,20 @@
     .brand {
       font-size: 1.25rem;
       font-weight: 900;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
     }
     .brand span { color: var(--accent); }
+    .brand-logo {
+      width: 46px;
+      height: 46px;
+      border-radius: 8px;
+      object-fit: contain;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+    .brand-name { white-space: nowrap; }
     .top-actions { display: flex; gap: 10px; align-items: center; }
     .version-chip {
       border: 1px solid var(--line);
@@ -234,6 +246,16 @@
       z-index: 70;
     }
     .toast.show { opacity: 1; transform: translateY(0); }
+    .site-footer {
+      border-top: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      padding: 14px 16px;
+      text-align: center;
+      font-size: 0.86rem;
+      font-weight: 700;
+      direction: ltr;
+    }
     @media (max-width: 760px) {
       .filters, .grid { grid-template-columns: 1fr; }
       .bar { align-items: flex-start; flex-direction: column; padding: 16px 0; }
@@ -245,9 +267,12 @@
 <body>
   <header>
     <div class="bar">
-      <div class="brand">Jobs<span>CRM</span></div>
+      <div class="brand">
+        <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
+        <span class="brand-name">א.ש השמת עובדים</span>
+      </div>
       <div class="top-actions">
-        <span class="version-chip">v1.1.1</span>
+        <span class="version-chip">v1.1.3</span>
         <a class="btn" href="/pages/login.html">כניסת אדמין</a>
       </div>
     </div>
@@ -341,6 +366,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <footer class="site-footer">v1.1.3 · L.K Consulting</footer>
 
   <script>
     let jobs = [];
