@@ -13,11 +13,19 @@ services:
       - key: ADMIN_EMAIL
         value: alef.shin.jobs@gmail.com
       - key: EMAIL_PROVIDER
-        value: resend
-      - key: RESEND_API_KEY
+        value: smtp
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 465
+      - key: SMTP_SECURE
+        value: true
+      - key: SMTP_USER
+        value: alef.shin.jobs@gmail.com
+      - key: SMTP_PASS
         sync: false
       - key: MAIL_FROM
-        value: onboarding@resend.dev
+        value: א.ש השמת עובדים <alef.shin.jobs@gmail.com>
       - key: MAIL_REPLY_TO
         value: alef.shin.jobs@gmail.com
       - key: ADMIN_PASSWORD
