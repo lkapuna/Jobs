@@ -51,6 +51,7 @@ const applicationSchema = new mongoose.Schema({
 
 const candidateSchema = new mongoose.Schema({
   fullName: { type: String, required: true, trim: true },
+  identityNumber: { type: String, trim: true, default: '' },
   phone: { type: String, required: true, trim: true },
   email: { type: String, trim: true, lowercase: true, default: '' },
   city: { type: String, trim: true, default: '' },

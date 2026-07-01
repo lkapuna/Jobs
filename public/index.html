@@ -325,6 +325,10 @@
           <input name="fullName" required>
         </div>
         <div class="field">
+          <label>תעודת זהות</label>
+          <input name="identityNumber" inputmode="numeric">
+        </div>
+        <div class="field">
           <label>טלפון *</label>
           <input name="phone" required>
         </div>
@@ -379,7 +383,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <footer class="site-footer">v1.1.8 · L.K Consulting <a href="/pages/login.html">כניסת אדמין</a></footer>
+  <footer class="site-footer">v1.1.9 · L.K Consulting <a href="/pages/login.html">כניסת אדמין</a></footer>
 
   <script>
     let jobs = [];
@@ -455,7 +459,9 @@
 
     function closeApply() {
       document.getElementById('applyModal').classList.remove('open');
+      document.getElementById('applyForm').style.display = 'block';
       document.getElementById('applyForm').reset();
+      document.getElementById('applySuccess')?.remove();
     }
 
     document.getElementById('applyModal').addEventListener('click', event => {
@@ -474,8 +480,16 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Submission failed');
-        closeApply();
-        showToast('הפרטים נשלחו בהצלחה. נחזור אליך בהקדם.');
+        document.getElementById('applyForm').style.display = 'none';
+        document.getElementById('applySuccess')?.remove();
+        document.getElementById('applyModal').insertAdjacentHTML('beforeend', `
+          <div class="dialog" id="applySuccess" style="text-align:center">
+            <h2>הפרטים נשלחו בהצלחה</h2>
+            <p style="color:var(--muted);line-height:1.7;margin:14px 0 22px">קיבלנו את הפנייה וקורות החיים. נחזור אליך בהקדם כאשר יש התאמה.</p>
+            <button class="primary" onclick="closeApply()">סגור</button>
+          </div>
+        `);
+        showToast(data.emailSent === false ? 'הפרטים נשמרו במערכת. בדוק הגדרות מייל באדמין.' : 'הפרטים נשלחו בהצלחה.');
       } catch (err) {
         showToast(err.message || 'לא ניתן לשלוח כרגע.');
       } finally {

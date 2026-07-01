@@ -81,6 +81,26 @@ const statuses = [
   'not_relevant'
 ];
 
+const noteLabels = {
+  general: 'כללי',
+  phone_call: 'סיכום שיחה טלפונית',
+  front_interview: 'סיכום ראיון פרונטלי',
+  internal: 'הערה פנימית',
+  shareable: 'הערה לשליחה למעסיק'
+};
+
+function selectedCandidateNotes(candidate, types) {
+  return (candidate.notes || [])
+    .filter(note => types.includes(note.type))
+    .map(note => `- ${noteLabels[note.type] || note.type}: ${note.text}`)
+    .join('\n');
+}
+
+function latestApplication(candidate) {
+  const applications = candidate.applications || [];
+  return applications[applications.length - 1] || {};
+}
+
 router.get('/public/jobs', async (req, res) => {
   try {
     const jobs = await Job.find({ isActive: true, status: { $ne: 'closed' } })
@@ -98,6 +118,7 @@ router.post('/public/apply', upload.single('cv'), async (req, res) => {
     const {
       jobId,
       fullName,
+      identityNumber,
       phone,
       email,
       city,
@@ -149,6 +170,7 @@ router.post('/public/apply', upload.single('cv'), async (req, res) => {
     if (!candidate) {
       candidate = new Candidate({
         fullName,
+        identityNumber,
         phone,
         email,
         city,
@@ -160,10 +182,11 @@ router.post('/public/apply', upload.single('cv'), async (req, res) => {
         consentToStore: consentToStore === 'true' || consentToStore === 'on',
         cv,
         applications: [application],
-        notes: message ? [{ type: 'general', text: `Candidate message: ${message}` }] : []
+        notes: message ? [{ type: 'general', text: `הערות המועמד למשרה: ${message}` }] : []
       });
     } else {
       candidate.fullName = fullName || candidate.fullName;
+      candidate.identityNumber = identityNumber || candidate.identityNumber;
       candidate.email = email || candidate.email;
       candidate.city = city || candidate.city;
       candidate.area = area || candidate.area;
@@ -174,31 +197,46 @@ router.post('/public/apply', upload.single('cv'), async (req, res) => {
       candidate.consentToStore = candidate.consentToStore || consentToStore === 'true' || consentToStore === 'on';
       if (req.file) candidate.cv = cv;
       candidate.applications.push(application);
-      if (message) candidate.notes.push({ type: 'general', text: `Candidate message: ${message}` });
+      if (message) candidate.notes.push({ type: 'general', text: `הערות המועמד למשרה: ${message}` });
     }
 
     await candidate.save();
 
-    await sendMail({
-      to: process.env.ADMIN_EMAIL || 'alef.shin.jobs@gmail.com',
-      subject: `New candidate for ${job.title}`,
-      text: [
-        `New application for: ${job.title}`,
-        '',
-        `Name: ${candidate.fullName}`,
-        `Phone: ${candidate.phone}`,
-        `Email: ${candidate.email || '-'}`,
-        `Area: ${candidate.area || candidate.city || '-'}`,
-        `Categories: ${(candidate.categories || []).join(', ') || '-'}`,
-        `Availability: ${candidate.availability || '-'}`,
-        `Experience: ${candidate.experience || '-'}`,
-        `Message: ${message || '-'}`,
-        `CV: ${candidate.cv?.url || 'Not attached'}`
-      ].join('\n'),
-      attachments: req.file ? [{ filename: req.file.originalname, path: req.file.path }] : []
-    });
+    let emailSent = false;
+    let emailError = '';
+    try {
+      const mailResult = await sendMail({
+        to: process.env.ADMIN_EMAIL || 'alef.shin.jobs@gmail.com',
+        replyTo: candidate.email || undefined,
+        subject: `פנייה חדשה למשרה: ${job.title}`,
+        text: [
+          `פנייה חדשה למשרה: ${job.title}`,
+          '',
+          `שם: ${candidate.fullName}`,
+          `תעודת זהות: ${candidate.identityNumber || '-'}`,
+          `טלפון: ${candidate.phone}`,
+          `אימייל: ${candidate.email || '-'}`,
+          `אזור: ${candidate.area || candidate.city || '-'}`,
+          `קטגוריות: ${(candidate.categories || []).join(', ') || '-'}`,
+          `זמינות: ${candidate.availability || '-'}`,
+          `ניסיון: ${candidate.experience || '-'}`,
+          `הערות המועמד למשרה: ${message || '-'}`,
+          `קורות חיים: ${candidate.cv?.url || 'לא צורף'}`
+        ].join('\n'),
+        attachments: req.file ? [{ filename: req.file.originalname, path: req.file.path }] : []
+      });
+      emailSent = !mailResult?.skipped;
+    } catch (mailErr) {
+      emailError = mailErr.message || 'Email failed';
+      console.error('Candidate notification email failed:', mailErr);
+    }
 
-    res.status(201).json({ message: 'Application received', candidateId: candidate._id });
+    res.status(201).json({
+      message: 'Application received',
+      candidateId: candidate._id,
+      emailSent,
+      emailError
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Could not submit application' });
@@ -207,12 +245,13 @@ router.post('/public/apply', upload.single('cv'), async (req, res) => {
 
 router.get('/admin/candidates', ...adminOnly, async (req, res) => {
   try {
-    const { q, status, category, area } = req.query;
+    const { q, status, category, area, jobId } = req.query;
     const filter = {};
     const and = [];
 
     if (status) filter.status = status;
     if (category) filter.categories = category;
+    if (jobId) filter['applications.job'] = jobId;
     if (area) and.push({ $or: [{ area: new RegExp(area, 'i') }, { city: new RegExp(area, 'i') }] });
     if (q) {
       and.push({
@@ -237,6 +276,19 @@ router.get('/admin/candidates', ...adminOnly, async (req, res) => {
   }
 });
 
+router.get('/admin/jobs/:id/candidates', ...adminOnly, async (req, res) => {
+  try {
+    const candidates = await Candidate.find({ 'applications.job': req.params.id })
+      .populate('applications.job', 'title area category profession')
+      .sort({ updatedAt: -1 })
+      .limit(300);
+    res.json(candidates);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not load job candidates' });
+  }
+});
+
 router.get('/admin/candidates/:id', ...adminOnly, async (req, res) => {
   try {
     const candidate = await Candidate.findById(req.params.id)
@@ -252,7 +304,7 @@ router.patch('/admin/candidates/:id', ...adminOnly, async (req, res) => {
   try {
     const allowed = [
       'fullName', 'phone', 'email', 'city', 'area', 'experience', 'availability',
-      'salaryExpectations', 'categories', 'priority', 'status', 'startedWorkingAt',
+      'identityNumber', 'salaryExpectations', 'categories', 'priority', 'status', 'startedWorkingAt',
       'contactPerson', 'lastContactedAt'
     ];
     const patch = {};
@@ -269,6 +321,17 @@ router.patch('/admin/candidates/:id', ...adminOnly, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Could not update candidate' });
+  }
+});
+
+router.delete('/admin/candidates/:id', ...adminOnly, async (req, res) => {
+  try {
+    const candidate = await Candidate.findByIdAndDelete(req.params.id);
+    if (!candidate) return res.status(404).json({ error: 'Candidate not found' });
+    res.json({ message: 'Candidate deleted' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not delete candidate' });
   }
 });
 
@@ -373,10 +436,8 @@ router.post('/admin/candidates/:id/send-to-employer', ...adminOnly, async (req, 
     if (req.body.includeInterviewNotes !== false) shareableTypes.push('front_interview');
     if (req.body.includeShareableNotes !== false) shareableTypes.push('shareable');
 
-    const notes = (candidate.notes || [])
-      .filter(note => shareableTypes.includes(note.type))
-      .map(note => `- ${note.type}: ${note.text}`)
-      .join('\n');
+    const notes = selectedCandidateNotes(candidate, shareableTypes);
+    const application = latestApplication(candidate);
 
     const hideEmployerRecipient = process.env.HIDE_EMPLOYER_RECIPIENT === 'true';
     const visibleRecipient = process.env.MAIL_VISIBLE_TO || process.env.SMTP_USER;
@@ -385,19 +446,23 @@ router.post('/admin/candidates/:id/send-to-employer', ...adminOnly, async (req, 
       to: hideEmployerRecipient ? visibleRecipient : employerEmail,
       bcc: hideEmployerRecipient ? employerEmail : undefined,
       replyTo: process.env.MAIL_REPLY_TO || undefined,
-      subject: `Candidate details: ${candidate.fullName}`,
+      subject: `פרטי מועמד: ${candidate.fullName}`,
       text: [
-        req.body.message || 'Hello, sending candidate details for your review.',
+        req.body.message || 'שלום, מצורפים פרטי מועמד לבדיקה.',
         '',
-        `Candidate: ${candidate.fullName}`,
-        `Phone: ${candidate.phone}`,
-        `Email: ${candidate.email || '-'}`,
-        `Area: ${candidate.area || candidate.city || '-'}`,
-        `Categories: ${(candidate.categories || []).join(', ') || '-'}`,
-        `Availability: ${candidate.availability || '-'}`,
-        `Experience: ${candidate.experience || '-'}`,
+        `שם מועמד: ${candidate.fullName}`,
+        `תעודת זהות: ${candidate.identityNumber || '-'}`,
+        `טלפון: ${candidate.phone}`,
+        `אימייל: ${candidate.email || '-'}`,
+        `אזור: ${candidate.area || candidate.city || '-'}`,
+        `קטגוריות: ${(candidate.categories || []).join(', ') || '-'}`,
+        `זמינות: ${candidate.availability || '-'}`,
+        `ניסיון: ${candidate.experience || '-'}`,
+        `הערות המועמד למשרה: ${application.message || '-'}`,
         '',
-        notes ? `Interviewer notes:\n${notes}` : 'No shareable interviewer notes were selected.'
+        notes ? `הערות מראיין:\n${notes}` : 'לא נבחרו הערות מראיין לשליחה.',
+        '',
+        candidate.cv?.path && req.body.includeCv !== false ? 'קורות החיים מצורפים למייל זה.' : 'קורות חיים לא צורפו למייל זה.'
       ].join('\n'),
       attachments: req.body.includeCv !== false && candidate.cv?.path
         ? [{ filename: candidate.cv.originalName || 'candidate-cv', path: candidate.cv.path }]
@@ -435,8 +500,93 @@ router.post('/admin/candidates/:id/send-to-employer', ...adminOnly, async (req, 
   }
 });
 
+router.post('/admin/candidates/:id/send-placement-agreement', ...adminOnly, async (req, res) => {
+  try {
+    const candidate = await Candidate.findById(req.params.id);
+    if (!candidate) return res.status(404).json({ error: 'Candidate not found' });
+
+    const employer = req.body.employerContact
+      ? await EmployerContact.findById(req.body.employerContact)
+      : null;
+
+    const employerEmail = req.body.employerEmail || employer?.email;
+    const employerName = req.body.employerName || employer?.businessName || '';
+    if (!employerEmail) return res.status(400).json({ error: 'Employer email is required' });
+
+    const jobTitle = req.body.jobTitle || latestApplication(candidate).jobTitle || '';
+    const feeTerms = req.body.feeTerms || 'המעסיק מאשר תשלום דמי השמה לאחר חודש עבודה מלא של המועמד, בהתאם להסכמות בין הצדדים.';
+    const html = `
+      <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.7;color:#111">
+        <h2>טופס אישור דמי השמה</h2>
+        <p>שלום ${employerName || ''},</p>
+        <p>מצורף נוסח אישור לחתימה דיגיטלית/חתימה והשבה במייל עבור מועמד שנשלח אליך מטעם א.ש השמת עובדים.</p>
+        <table style="border-collapse:collapse;width:100%;max-width:680px">
+          <tr><td style="border:1px solid #ddd;padding:8px;font-weight:bold">שם המועמד</td><td style="border:1px solid #ddd;padding:8px">${candidate.fullName}</td></tr>
+          <tr><td style="border:1px solid #ddd;padding:8px;font-weight:bold">תעודת זהות</td><td style="border:1px solid #ddd;padding:8px">${candidate.identityNumber || '-'}</td></tr>
+          <tr><td style="border:1px solid #ddd;padding:8px;font-weight:bold">טלפון המועמד</td><td style="border:1px solid #ddd;padding:8px">${candidate.phone}</td></tr>
+          <tr><td style="border:1px solid #ddd;padding:8px;font-weight:bold">משרה</td><td style="border:1px solid #ddd;padding:8px">${jobTitle || '-'}</td></tr>
+          <tr><td style="border:1px solid #ddd;padding:8px;font-weight:bold">פרטי אישור</td><td style="border:1px solid #ddd;padding:8px">${feeTerms}</td></tr>
+        </table>
+        <p><strong>אישור מעסיק:</strong></p>
+        <p>אני מאשר/ת כי קיבלתי את פרטי המועמד וכי במקרה שהמועמד יתחיל לעבוד אצלי, אשלם דמי השמה לאחר חודש עבודה מלא, בהתאם להסכמות בין הצדדים.</p>
+        <p>שם מאשר/ת: ____________________</p>
+        <p>תפקיד: ____________________</p>
+        <p>חתימה: ____________________</p>
+        <p>תאריך: ____________________</p>
+        <p>ניתן להשיב למייל זה עם אישור כתוב או קובץ חתום.</p>
+      </div>
+    `;
+
+    await sendMail({
+      to: employerEmail,
+      replyTo: process.env.MAIL_REPLY_TO || process.env.SMTP_USER,
+      subject: `טופס אישור דמי השמה - ${candidate.fullName}`,
+      html,
+      text: [
+        `טופס אישור דמי השמה`,
+        '',
+        `שם מועמד: ${candidate.fullName}`,
+        `תעודת זהות: ${candidate.identityNumber || '-'}`,
+        `טלפון מועמד: ${candidate.phone}`,
+        `משרה: ${jobTitle || '-'}`,
+        '',
+        feeTerms,
+        '',
+        'נא להשיב למייל זה עם אישור כתוב או קובץ חתום.'
+      ].join('\n')
+    });
+
+    candidate.notes.push({
+      type: 'internal',
+      text: `נשלח טופס אישור דמי השמה למעסיק ${employerName || employerEmail}`,
+      createdBy: req.user._id
+    });
+    await candidate.save();
+
+    res.status(201).json({ message: 'Placement agreement sent' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Could not send placement agreement' });
+  }
+});
+
 router.get('/admin/statuses', ...adminOnly, (req, res) => {
   res.json(statuses);
+});
+
+router.post('/admin/test-email', ...adminOnly, async (req, res) => {
+  try {
+    const to = process.env.ADMIN_EMAIL || 'alef.shin.jobs@gmail.com';
+    const result = await sendMail({
+      to,
+      subject: 'בדיקת מייל - א.ש השמת עובדים',
+      text: 'אם קיבלת את המייל הזה, הגדרות ה-SMTP ב-Render תקינות.'
+    });
+    res.json({ message: result?.skipped ? 'SMTP is not configured' : 'Test email sent', skipped: !!result?.skipped });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Could not send test email' });
+  }
 });
 
 module.exports = router;

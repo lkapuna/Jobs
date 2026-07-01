@@ -271,7 +271,7 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.1.8</div>
+      <div class="version-chip">v1.1.9</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
@@ -288,7 +288,10 @@
           <h1 id="pageTitle">סקירת מערכת</h1>
           <div class="sub" id="pageSub">ניהול משרות, מועמדים, הערות ושליחה למעסיקים</div>
         </div>
-        <button onclick="refresh()">רענן</button>
+        <div class="row-actions">
+          <button onclick="sendTestEmail()">בדיקת מייל</button>
+          <button onclick="refresh()">רענן</button>
+        </div>
       </div>
 
       <section id="section-overview" class="section active">
@@ -333,12 +336,13 @@
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.1.8 · L.K Consulting</footer>
+      <footer class="site-footer">v1.1.9 · L.K Consulting</footer>
     </main>
   </div>
 
   <div class="modal" id="candidateModal"></div>
   <div class="modal" id="jobModal"></div>
+  <div class="modal" id="jobCandidatesModal"></div>
   <div class="modal" id="employerModal"></div>
   <div class="print-card" id="printCard"></div>
   <div class="toast" id="toast"></div>
@@ -429,6 +433,11 @@
       if (state.section === 'submissions') return loadSubmissions();
     }
 
+    async function sendTestEmail() {
+      const result = await api('/api/recruitment/admin/test-email', { method: 'POST', body: JSON.stringify({}) });
+      showToast(result.skipped ? 'SMTP לא מוגדר ב-Render ולכן לא נשלח מייל.' : 'מייל בדיקה נשלח למייל הראשי.');
+    }
+
     async function loadOverview() {
       const [stats, candidates] = await Promise.all([
         api('/api/admin/stats'),
@@ -477,7 +486,7 @@
                 <td>${categoryChips(c.categories)}</td>
                 <td>${badge(c.status)}</td>
                 <td>${escapeHtml(c.applications?.[c.applications.length - 1]?.jobTitle || '-')}<div class="muted">${fmtDate(c.updatedAt || c.createdAt)}</div></td>
-                <td><div class="row-actions"><button onclick="openCandidate('${c._id}')">פתח כרטיס</button>${actions ? `<button class="blue" onclick="quickStatus('${c._id}', 'talent_pool')">למאגר</button>` : ''}</div></td>
+                <td><div class="row-actions"><button onclick="openCandidate('${c._id}')">פתח כרטיס</button>${actions ? `<button class="blue" onclick="quickStatus('${c._id}', 'talent_pool')">למאגר</button><button class="danger" onclick="deleteCandidate('${c._id}', '${escapeHtml(c.fullName)}')">מחק</button>` : ''}</div></td>
               </tr>
             `).join('')}
           </tbody>
@@ -505,6 +514,7 @@
             <div id="tab-details" class="tab-panel active">
               <div class="grid">
                 ${inputField('fullName', 'שם מלא', candidate.fullName)}
+                ${inputField('identityNumber', 'תעודת זהות', candidate.identityNumber)}
                 ${inputField('phone', 'טלפון', candidate.phone)}
                 ${inputField('email', 'אימייל', candidate.email)}
                 ${inputField('area', 'אזור', candidate.area)}
@@ -554,6 +564,13 @@
                 <button onclick="printCandidate()">הדפס / שמור PDF</button>
                 <button onclick="downloadCandidateSummary()">הורד סיכום מועמד</button>
               </div>
+              <div class="grid" style="margin-top:18px">
+                <div class="field"><label>מייל מעסיק לטופס חתימה</label><input id="agreementEmployerEmail" type="email"></div>
+                <div class="field"><label>שם מעסיק / עסק</label><input id="agreementEmployerName"></div>
+                <div class="field"><label>שם משרה</label><input id="agreementJobTitle" value="${escapeHtml(candidate.applications?.[candidate.applications.length - 1]?.jobTitle || '')}"></div>
+                <div class="field full"><label>נוסח התחייבות</label><textarea id="agreementTerms">המעסיק מאשר תשלום דמי השמה לאחר חודש עבודה מלא של המועמד, בהתאם להסכמות בין הצדדים.</textarea></div>
+              </div>
+              <button class="blue" onclick="sendPlacementAgreement()">שלח טופס חתימה דיגיטלי למעסיק</button>
             </div>
           </div>
         </div>`;
@@ -564,7 +581,7 @@
     }
     function renderNotes(notes = []) {
       return notes.length ? notes.slice().reverse().map(n => `
-        <div class="note"><small>${noteLabels[n.type] || n.type} | ${fmtDate(n.createdAt)} ${n.interviewer ? ' | ' + escapeHtml(n.interviewer) : ''}</small><div>${escapeHtml(n.text)}</div></div>
+        <div class="note"><small>${noteLabels[n.type] || n.type} | ${fmtDate(n.createdAt)} ${n.interviewer ? ' | ' + escapeHtml(n.interviewer) : ''}</small><div>${escapeHtml(String(n.text || '').replace('Candidate message:', 'הערות המועמד למשרה:'))}</div></div>
       `).join('') : '<div class="muted">אין הערות עדיין.</div>';
     }
     function showTab(name) {
@@ -576,7 +593,7 @@
     async function saveCandidate() {
       const c = state.currentCandidate;
       const body = {
-        fullName: val('fullName'), phone: val('phone'), email: val('email'), area: val('area'), city: val('city'),
+        fullName: val('fullName'), identityNumber: val('identityNumber'), phone: val('phone'), email: val('email'), area: val('area'), city: val('city'),
         availability: val('availability'), salaryExpectations: val('salaryExpectations'), contactPerson: val('contactPerson'),
         experience: document.getElementById('candidateEdit-experience').value,
         categories: document.getElementById('candidateEdit-categories').value,
@@ -592,6 +609,12 @@
     async function quickStatus(id, status) {
       await api(`/api/recruitment/admin/candidates/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
       showToast('סטטוס עודכן');
+      loadCandidates();
+    }
+    async function deleteCandidate(id, name) {
+      if (!confirm(`למחוק את המועמד ${name}?`)) return;
+      await api(`/api/recruitment/admin/candidates/${id}`, { method: 'DELETE' });
+      showToast('המועמד נמחק');
       loadCandidates();
     }
     async function addNote() {
@@ -620,9 +643,24 @@
       showToast('המועמד נשלח למעסיק');
       await openCandidate(c._id);
     }
+    async function sendPlacementAgreement() {
+      const c = state.currentCandidate;
+      await api(`/api/recruitment/admin/candidates/${c._id}/send-placement-agreement`, {
+        method: 'POST',
+        body: JSON.stringify({
+          employerEmail: document.getElementById('agreementEmployerEmail').value,
+          employerName: document.getElementById('agreementEmployerName').value,
+          jobTitle: document.getElementById('agreementJobTitle').value,
+          feeTerms: document.getElementById('agreementTerms').value
+        })
+      });
+      showToast('טופס החתימה נשלח למעסיק');
+      await openCandidate(c._id);
+    }
     function candidateSummary(c = state.currentCandidate) {
       return [
         `כרטיס מועמד: ${c.fullName}`,
+        `תעודת זהות: ${c.identityNumber || '-'}`,
         `טלפון: ${c.phone}`,
         `אימייל: ${c.email || '-'}`,
         `אזור: ${c.area || c.city || '-'}`,
@@ -635,7 +673,7 @@
         c.experience || '-',
         '',
         'הערות:',
-        ...(c.notes || []).map(n => `${fmtDate(n.createdAt)} | ${noteLabels[n.type] || n.type} | ${n.text}`)
+        ...(c.notes || []).map(n => `${fmtDate(n.createdAt)} | ${noteLabels[n.type] || n.type} | ${String(n.text || '').replace('Candidate message:', 'הערות המועמד למשרה:')}`)
       ].join('\n');
     }
     function printCandidate() {
@@ -655,9 +693,34 @@
     async function loadJobs() {
       state.jobs = await api('/api/admin/jobs');
       document.getElementById('jobsTable').innerHTML = state.jobs.length ? `
-        <table><thead><tr><th>משרה</th><th>קטגוריה</th><th>אזור</th><th>שכר</th><th>סטטוס</th><th>פעולות</th></tr></thead><tbody>
-          ${state.jobs.map(j => `<tr><td><strong>${escapeHtml(j.title)}</strong><div class="muted">${escapeHtml(j.description || '')}</div></td><td>${escapeHtml(j.category || j.profession)}</td><td>${escapeHtml(j.area)}</td><td>${j.hourlyRate ? '₪' + j.hourlyRate : '-'}</td><td>${j.status === 'closed' ? 'סגורה' : 'פתוחה'}</td><td><button onclick="openJobModal('${j._id}')">ערוך</button></td></tr>`).join('')}
+        <table><thead><tr><th>משרה</th><th>קטגוריה</th><th>אזור</th><th>שכר</th><th>סטטוס</th><th>מועמדים</th><th>פעולות</th></tr></thead><tbody>
+          ${state.jobs.map(j => `<tr><td><strong>${escapeHtml(j.title)}</strong><div class="muted">${escapeHtml(j.description || '')}</div></td><td>${escapeHtml(j.category || j.profession)}</td><td>${escapeHtml(j.area)}</td><td>${j.hourlyRate ? '₪' + j.hourlyRate : '-'}</td><td>${j.status === 'closed' ? 'לא זמינה' : 'זמינה'}</td><td><button onclick="openJobCandidates('${j._id}', '${escapeHtml(j.title)}')">ראה מועמדים</button></td><td><div class="row-actions"><button onclick="openJobModal('${j._id}')">ערוך</button><button class="blue" onclick="toggleJobAvailability('${j._id}', '${j.status === 'closed' ? 'open' : 'closed'}')">${j.status === 'closed' ? 'הפוך לזמינה' : 'הפוך ללא זמינה'}</button><button class="danger" onclick="deleteJob('${j._id}', '${escapeHtml(j.title)}')">מחק</button></div></td></tr>`).join('')}
         </tbody></table>` : '<div style="padding:24px" class="muted">אין משרות עדיין.</div>';
+    }
+    async function openJobCandidates(jobId, title) {
+      const candidates = await api(`/api/recruitment/admin/jobs/${jobId}/candidates`);
+      document.getElementById('jobCandidatesModal').innerHTML = `
+        <div class="dialog">
+          <div class="dialog-head">
+            <strong>מועמדים למשרה: ${escapeHtml(title)}</strong>
+            <button onclick="closeModal('jobCandidatesModal')">סגור</button>
+          </div>
+          <div class="dialog-body">
+            ${candidates.length ? renderCandidateTable(candidates, false) : '<div class="muted">אין מועמדים למשרה הזו עדיין.</div>'}
+          </div>
+        </div>`;
+      document.getElementById('jobCandidatesModal').classList.add('open');
+    }
+    async function toggleJobAvailability(id, status) {
+      await api(`/api/admin/jobs/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+      showToast(status === 'closed' ? 'המשרה הוגדרה כלא זמינה' : 'המשרה הוגדרה כזמינה');
+      loadJobs();
+    }
+    async function deleteJob(id, title) {
+      if (!confirm(`למחוק את המשרה ${title}?`)) return;
+      await api(`/api/admin/jobs/${id}`, { method: 'DELETE' });
+      showToast('המשרה נמחקה');
+      loadJobs();
     }
     function openJobModal(id = '') {
       const job = state.jobs.find(j => j._id === id) || {};
