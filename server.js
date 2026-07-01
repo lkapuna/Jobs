@@ -33,6 +33,7 @@ app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/recruitment', require('./routes/recruitment'));
+app.use('/api/agreements', require('./routes/agreements'));
 
 app.get('/api/version', (req, res) => {
   res.json({ version: require('./package.json').version });

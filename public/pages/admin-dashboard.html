@@ -271,12 +271,13 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.1.9</div>
+      <div class="version-chip">v1.2.0</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
         <button class="nav" onclick="showSection('jobs')">משרות</button>
         <button class="nav" onclick="showSection('employers')">מעסיקים</button>
+        <button class="nav" onclick="showSection('agreements')">הסכמי השמה</button>
         <button class="nav" onclick="showSection('submissions')">שליחות למעסיקים</button>
         <button class="nav logout" onclick="logout()">יציאה</button>
       </nav>
@@ -330,13 +331,35 @@
         </div>
       </section>
 
+      <section id="section-agreements" class="section">
+        <div class="cards" id="agreementStats"></div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">הסכמי השמה</span><button class="primary" onclick="openAgreementModal()">יצירת הסכם השמה</button></div>
+          <div class="filters">
+            <input id="agreementQ" placeholder="עסק, מועמד, טלפון או תפקיד" oninput="loadAgreements()">
+            <select id="agreementStatus" onchange="loadAgreements()">
+              <option value="">כל הסטטוסים</option>
+              <option value="draft">טיוטה</option>
+              <option value="sent">נשלח</option>
+              <option value="viewed">נצפה</option>
+              <option value="signed">נחתם</option>
+              <option value="waiting_payment">ממתין לתשלום</option>
+              <option value="paid">שולם</option>
+              <option value="cancelled">בוטל</option>
+            </select>
+            <button onclick="loadAgreements()">רענן</button>
+          </div>
+          <div id="agreementsTable"></div>
+        </div>
+      </section>
+
       <section id="section-submissions" class="section">
         <div class="panel">
           <div class="panel-head"><span class="panel-title">היסטוריית שליחות למעסיקים</span></div>
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.1.9 · L.K Consulting</footer>
+      <footer class="site-footer">v1.2.0 · L.K Consulting</footer>
     </main>
   </div>
 
@@ -344,6 +367,7 @@
   <div class="modal" id="jobModal"></div>
   <div class="modal" id="jobCandidatesModal"></div>
   <div class="modal" id="employerModal"></div>
+  <div class="modal" id="agreementModal"></div>
   <div class="print-card" id="printCard"></div>
   <div class="toast" id="toast"></div>
 
@@ -375,7 +399,17 @@
       internal: 'פנימי בלבד',
       shareable: 'ניתן לשליחה למעסיק'
     };
-    const state = { section: 'overview', stats: null, candidates: [], jobs: [], employers: [], submissions: [], currentCandidate: null };
+    const agreementStatusLabels = {
+      draft: 'טיוטה',
+      sent: 'נשלח',
+      viewed: 'נצפה',
+      signed: 'נחתם',
+      started_working: 'העובד התחיל לעבוד',
+      waiting_payment: 'ממתין לתשלום',
+      paid: 'שולם',
+      cancelled: 'בוטל'
+    };
+    const state = { section: 'overview', stats: null, candidates: [], jobs: [], employers: [], submissions: [], agreements: [], currentCandidate: null };
 
     function escapeHtml(value) {
       return String(value || '').replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
@@ -411,7 +445,8 @@
         candidates: ['מועמדים', 'סינון, סטטוס, הערות וראיונות'],
         jobs: ['משרות', 'יצירה ועריכה של משרות פתוחות'],
         employers: ['מעסיקים', 'אנשי קשר ומעסיקים פוטנציאליים'],
-        submissions: ['שליחות למעסיקים', 'מעקב אחרי מועמדים שנשלחו']
+        submissions: ['שליחות למעסיקים', 'מעקב אחרי מועמדים שנשלחו'],
+        agreements: ['הסכמי השמה', 'חתימה דיגיטלית, סטטוס עבודה וגבייה']
       };
       document.getElementById('pageTitle').textContent = meta[section][0];
       document.getElementById('pageSub').textContent = meta[section][1];
@@ -430,6 +465,7 @@
       if (state.section === 'candidates') return loadCandidates();
       if (state.section === 'jobs') return loadJobs();
       if (state.section === 'employers') return loadEmployers();
+      if (state.section === 'agreements') return loadAgreements();
       if (state.section === 'submissions') return loadSubmissions();
     }
 
@@ -809,6 +845,133 @@
       loadEmployers();
     }
 
+    async function loadAgreements() {
+      const params = new URLSearchParams();
+      const q = document.getElementById('agreementQ')?.value || '';
+      const status = document.getElementById('agreementStatus')?.value || '';
+      if (q) params.set('q', q);
+      if (status) params.set('status', status);
+      const [stats, agreements] = await Promise.all([
+        api('/api/agreements/admin/stats'),
+        api(`/api/agreements/admin?${params}`)
+      ]);
+      state.agreements = agreements;
+      document.getElementById('agreementStats').innerHTML = `
+        <div class="card"><div class="metric">${stats.sent || 0}</div><div class="metric-label">נשלחו / נצפו</div></div>
+        <div class="card"><div class="metric">${stats.signed || 0}</div><div class="metric-label">נחתמו</div></div>
+        <div class="card"><div class="metric">${stats.waitingPayment || 0}</div><div class="metric-label">ממתינים לתשלום</div></div>
+        <div class="card"><div class="metric">₪${Number(stats.openCollection || 0).toLocaleString('he-IL')}</div><div class="metric-label">פתוח לגבייה</div></div>
+      `;
+      document.getElementById('agreementsTable').innerHTML = agreements.length ? `
+        <table><thead><tr><th>עסק</th><th>מועמד</th><th>משרה</th><th>סכום</th><th>סטטוס</th><th>פעולות</th></tr></thead><tbody>
+          ${agreements.map(a => `<tr>
+            <td><strong>${escapeHtml(a.businessName)}</strong><div class="muted">${escapeHtml(a.contactEmail || '')}</div></td>
+            <td>${escapeHtml(a.candidateName)}<div class="muted">${escapeHtml(a.candidatePhone || '')}</div></td>
+            <td>${escapeHtml(a.jobTitle || '-')}</td>
+            <td>₪${Number(a.placementFee || 0).toLocaleString('he-IL')} + מע"מ</td>
+            <td>${escapeHtml(agreementStatusLabels[a.status] || a.status)}</td>
+            <td><div class="row-actions">
+              <button onclick="sendAgreement('${a._id}')">שלח לחתימה</button>
+              ${a.candidate?._id ? `<button onclick="openCandidate('${a.candidate._id}')">פתח מועמד</button>` : ''}
+              <button class="blue" onclick="markStartedWork('${a._id}')">העובד התחיל לעבוד</button>
+              <button class="blue" onclick="markAgreementPaid('${a._id}', ${Number(a.placementFee || 0)})">סמן כשולם</button>
+            </div></td>
+          </tr>`).join('')}
+        </tbody></table>` : '<div style="padding:24px" class="muted">אין הסכמי השמה להצגה.</div>';
+    }
+
+    function openAgreementModal() {
+      document.getElementById('agreementModal').innerHTML = `
+        <form class="dialog" onsubmit="saveAgreement(event)">
+          <div class="dialog-head"><strong>יצירת הסכם השמה</strong><button type="button" onclick="closeModal('agreementModal')">סגור</button></div>
+          <div class="dialog-body grid">
+            <div class="field"><label>עסק</label><select id="agreementEmployer" onchange="fillAgreementEmployer()"><option value="">בחר עסק</option>${state.employers.map(e => `<option value="${e._id}">${escapeHtml(e.businessName)}</option>`).join('')}</select></div>
+            <div class="field"><label>מועמד</label><select id="agreementCandidate" onchange="fillAgreementCandidate()"><option value="">בחר מועמד</option>${state.candidates.map(c => `<option value="${c._id}">${escapeHtml(c.fullName)} - ${escapeHtml(c.phone)}</option>`).join('')}</select></div>
+            ${formField('agreement-businessName', 'שם העסק', '', true)}
+            ${formField('agreement-businessId', 'ח.פ.')}
+            ${formField('agreement-businessAddress', 'כתובת')}
+            ${formField('agreement-contactName', 'איש קשר')}
+            ${formField('agreement-contactPhone', 'טלפון')}
+            ${formField('agreement-contactEmail', 'אימייל', '', true, 'email')}
+            ${formField('agreement-candidateName', 'שם מועמד', '', true)}
+            ${formField('agreement-candidatePhone', 'טלפון מועמד')}
+            ${formField('agreement-candidateIdentityNumber', 'תעודת זהות מועמד')}
+            ${formField('agreement-candidateRole', 'תפקיד')}
+            ${formField('agreement-jobTitle', 'משרה')}
+            ${formField('agreement-placementFee', 'סכום דמי השמה', '', true, 'number')}
+            ${formField('agreement-vatPercent', 'אחוז מע"מ', '18', false, 'number')}
+            <div class="field full"><label>הערות</label><textarea id="agreement-notes"></textarea></div>
+          </div>
+          <div class="dialog-foot"><button class="primary">הפק הסכם</button></div>
+        </form>`;
+      document.getElementById('agreementModal').classList.add('open');
+    }
+
+    function fillAgreementEmployer() {
+      const e = state.employers.find(x => x._id === document.getElementById('agreementEmployer').value);
+      if (!e) return;
+      document.getElementById('agreement-businessName').value = e.businessName || '';
+      document.getElementById('agreement-contactName').value = e.contactName || '';
+      document.getElementById('agreement-contactPhone').value = e.phone || '';
+      document.getElementById('agreement-contactEmail').value = e.email || '';
+    }
+    function fillAgreementCandidate() {
+      const c = state.candidates.find(x => x._id === document.getElementById('agreementCandidate').value);
+      if (!c) return;
+      document.getElementById('agreement-candidateName').value = c.fullName || '';
+      document.getElementById('agreement-candidatePhone').value = c.phone || '';
+      document.getElementById('agreement-candidateIdentityNumber').value = c.identityNumber || '';
+      document.getElementById('agreement-candidateRole').value = c.categories?.[0] || '';
+    }
+
+    async function saveAgreement(event) {
+      event.preventDefault();
+      const body = {
+        employerContact: document.getElementById('agreementEmployer').value || undefined,
+        candidate: document.getElementById('agreementCandidate').value || undefined,
+        businessName: document.getElementById('agreement-businessName').value,
+        businessId: document.getElementById('agreement-businessId').value,
+        businessAddress: document.getElementById('agreement-businessAddress').value,
+        contactName: document.getElementById('agreement-contactName').value,
+        contactPhone: document.getElementById('agreement-contactPhone').value,
+        contactEmail: document.getElementById('agreement-contactEmail').value,
+        candidateName: document.getElementById('agreement-candidateName').value,
+        candidatePhone: document.getElementById('agreement-candidatePhone').value,
+        candidateIdentityNumber: document.getElementById('agreement-candidateIdentityNumber').value,
+        candidateRole: document.getElementById('agreement-candidateRole').value,
+        jobTitle: document.getElementById('agreement-jobTitle').value,
+        placementFee: Number(document.getElementById('agreement-placementFee').value || 0),
+        vatPercent: Number(document.getElementById('agreement-vatPercent').value || 18),
+        notes: document.getElementById('agreement-notes').value
+      };
+      await api('/api/agreements/admin', { method: 'POST', body: JSON.stringify(body) });
+      closeModal('agreementModal');
+      showToast('הסכם השמה נוצר');
+      showSection('agreements');
+    }
+
+    async function sendAgreement(id) {
+      const result = await api(`/api/agreements/admin/${id}/send`, { method: 'POST', body: JSON.stringify({}) });
+      showToast(result.link ? 'ההסכם נשלח לחתימה' : 'ההסכם עודכן');
+      loadAgreements();
+    }
+    async function markStartedWork(id) {
+      const startedWorkingAt = prompt('תאריך תחילת עבודה YYYY-MM-DD');
+      if (!startedWorkingAt) return;
+      await api(`/api/agreements/admin/${id}/started-work`, { method: 'POST', body: JSON.stringify({ startedWorkingAt }) });
+      showToast('ספירת 30 יום התחילה');
+      loadAgreements();
+    }
+    async function markAgreementPaid(id, defaultAmount) {
+      const paidAmount = prompt('סכום ששולם', defaultAmount || '');
+      if (paidAmount === null) return;
+      const paymentMethod = prompt('אמצעי תשלום', '');
+      const invoiceNumber = prompt('מספר חשבונית', '');
+      await api(`/api/agreements/admin/${id}/paid`, { method: 'POST', body: JSON.stringify({ paidAmount, paymentMethod, invoiceNumber }) });
+      showToast('ההסכם סומן כשולם');
+      loadAgreements();
+    }
+
     async function loadSubmissions() {
       state.submissions = await api('/api/recruitment/admin/submissions');
       document.getElementById('submissionsTable').innerHTML = state.submissions.length ? `
@@ -821,7 +984,7 @@
     document.querySelectorAll('.modal').forEach(modal => modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('open'); }));
     function logout() { localStorage.clear(); window.location = '/pages/login.html'; }
 
-    Promise.all([loadEmployers(), loadJobs()]).then(loadOverview).catch(err => showToast(err.message));
+    Promise.all([loadEmployers(), loadJobs(), loadCandidates()]).then(loadOverview).catch(err => showToast(err.message));
   </script>
 </body>
 </html>

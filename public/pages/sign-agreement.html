@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>חתימה על הסכם השמה</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Heebo, Arial, sans-serif; background: #eef2f6; color: #111827; }
+    header, footer { background: #fff; border-bottom: 1px solid #d9e0e8; padding: 14px 18px; text-align: center; }
+    footer { border-top: 1px solid #d9e0e8; border-bottom: 0; color: #667085; font-weight: 700; direction: ltr; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.2rem; }
+    .brand img { width: 46px; height: 46px; object-fit: contain; border: 1px solid #d9e0e8; border-radius: 8px; background: #fff; }
+    main { width: min(980px, calc(100% - 28px)); margin: 24px auto; }
+    .panel { background: #fff; border: 1px solid #d9e0e8; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+    h1 { margin: 0 0 10px; font-size: 1.8rem; }
+    pre { white-space: pre-wrap; font-family: Heebo, Arial, sans-serif; line-height: 1.8; background: #f8fafc; border: 1px solid #d9e0e8; border-radius: 8px; padding: 16px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field { margin-bottom: 12px; }
+    label { display: block; margin-bottom: 5px; color: #344054; font-weight: 800; font-size: 0.86rem; }
+    input { width: 100%; border: 1px solid #d9e0e8; border-radius: 8px; padding: 11px 12px; font-family: inherit; }
+    canvas { width: 100%; height: 180px; border: 1px solid #98a2b3; border-radius: 8px; background: #fff; touch-action: none; }
+    .actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+    button { border: 1px solid #d9e0e8; border-radius: 8px; background: #fff; padding: 10px 14px; font-family: inherit; font-weight: 900; cursor: pointer; }
+    button.primary { background: #0f766e; border-color: #0f766e; color: #fff; }
+    .muted { color: #667085; }
+    .success { color: #166534; font-weight: 900; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><img src="/assets/ash-hasama-logo.png" alt="א.ש השמת עובדים"><span>א.ש השמת עובדים</span></div>
+  </header>
+  <main>
+    <section class="panel">
+      <h1>הסכם השמה לחתימה</h1>
+      <div id="status" class="muted">טוען הסכם...</div>
+    </section>
+    <section class="panel" id="agreementPanel" style="display:none">
+      <pre id="agreementText"></pre>
+    </section>
+    <section class="panel" id="signPanel" style="display:none">
+      <h2>חתימה דיגיטלית</h2>
+      <div class="grid">
+        <div class="field"><label>שם החותם</label><input id="signerName" required></div>
+        <div class="field"><label>תפקיד</label><input id="signerRole"></div>
+        <div class="field"><label>טלפון</label><input id="signerPhone"></div>
+        <div class="field"><label>אימייל</label><input id="signerEmail" type="email"></div>
+      </div>
+      <div class="field">
+        <label>חתימה</label>
+        <canvas id="signaturePad"></canvas>
+      </div>
+      <div class="actions">
+        <button onclick="clearSignature()">נקה חתימה</button>
+        <button class="primary" onclick="submitSignature()">חתום על ההסכם</button>
+      </div>
+    </section>
+  </main>
+  <footer>v1.2.0 · L.K Consulting</footer>
+  <script>
+    const token = new URLSearchParams(location.search).get('token');
+    const statusEl = document.getElementById('status');
+    const canvas = document.getElementById('signaturePad');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let signed = false;
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * devicePixelRatio;
+      canvas.height = rect.height * devicePixelRatio;
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#111827';
+    }
+    function pos(event) {
+      const rect = canvas.getBoundingClientRect();
+      const point = event.touches ? event.touches[0] : event;
+      return { x: point.clientX - rect.left, y: point.clientY - rect.top };
+    }
+    function start(event) { drawing = true; const p = pos(event); ctx.beginPath(); ctx.moveTo(p.x, p.y); event.preventDefault(); }
+    function move(event) { if (!drawing) return; const p = pos(event); ctx.lineTo(p.x, p.y); ctx.stroke(); signed = true; event.preventDefault(); }
+    function end() { drawing = false; }
+    function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); signed = false; }
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseleave', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+
+    async function loadAgreement() {
+      if (!token) { statusEl.textContent = 'קישור חתימה חסר.'; return; }
+      const res = await fetch(`/api/agreements/public/${token}`);
+      const data = await res.json();
+      if (!res.ok) { statusEl.textContent = data.error || 'לא ניתן לטעון הסכם.'; return; }
+      document.getElementById('agreementText').textContent = data.agreementText;
+      document.getElementById('agreementPanel').style.display = 'block';
+      if (data.agreement.status === 'signed') {
+        statusEl.innerHTML = '<span class="success">ההסכם כבר נחתם.</span>';
+      } else {
+        statusEl.textContent = 'נא לעיין בהסכם ולחתום בתחתית העמוד.';
+        document.getElementById('signPanel').style.display = 'block';
+        document.getElementById('signerName').value = data.agreement.contactName || '';
+        document.getElementById('signerPhone').value = data.agreement.contactPhone || '';
+        document.getElementById('signerEmail').value = data.agreement.contactEmail || '';
+        setTimeout(resizeCanvas, 50);
+      }
+    }
+
+    async function submitSignature() {
+      if (!document.getElementById('signerName').value.trim()) { alert('נא למלא שם חותם'); return; }
+      if (!signed) { alert('נא לחתום בתוך אזור החתימה'); return; }
+      const res = await fetch(`/api/agreements/public/${token}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signerName: document.getElementById('signerName').value,
+          signerRole: document.getElementById('signerRole').value,
+          signerPhone: document.getElementById('signerPhone').value,
+          signerEmail: document.getElementById('signerEmail').value,
+          signatureDataUrl: canvas.toDataURL('image/png'),
+          device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'לא ניתן לחתום כרגע'); return; }
+      document.getElementById('signPanel').style.display = 'none';
+      statusEl.innerHTML = '<span class="success">ההסכם נחתם ונשמר בהצלחה.</span>';
+    }
+
+    addEventListener('resize', resizeCanvas);
+    loadAgreement();
+  </script>
+</body>
+</html>
