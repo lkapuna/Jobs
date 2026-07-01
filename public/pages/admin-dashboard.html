@@ -271,7 +271,7 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.2.0</div>
+      <div class="version-chip">v1.2.1</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
@@ -359,7 +359,7 @@
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.2.0 · L.K Consulting</footer>
+      <footer class="site-footer">v1.2.1 · L.K Consulting</footer>
     </main>
   </div>
 
@@ -767,13 +767,16 @@
             ${formField('job-title', 'שם משרה', job.title, true)}
             ${formField('job-category', 'קטגוריה', job.category || job.profession, true)}
             ${formField('job-area', 'אזור', job.area, true)}
+            ${formField('job-address', 'כתובת', job.address)}
             ${formField('job-hourlyRate', 'שכר לשעה', job.hourlyRate || '', false, 'number')}
             ${formField('job-hours', 'שעות / משמרות', job.hours)}
+            ${formField('job-days', 'ימים', (job.days || []).join(', '))}
             ${formField('job-employerName', 'שם מעסיק להצגה', job.employerName)}
             <div class="field"><label>סטטוס</label><select id="job-status"><option value="open" ${job.status !== 'closed' ? 'selected' : ''}>פתוחה</option><option value="closed" ${job.status === 'closed' ? 'selected' : ''}>סגורה</option><option value="draft" ${job.status === 'draft' ? 'selected' : ''}>טיוטה</option></select></div>
             <div class="field"><label>סוג</label><select id="job-jobType"><option ${job.jobType === 'קבועה' ? 'selected' : ''}>קבועה</option><option ${job.jobType === 'זמנית' ? 'selected' : ''}>זמנית</option></select></div>
             <div class="field full"><label>תיאור</label><textarea id="job-description">${escapeHtml(job.description)}</textarea></div>
             <div class="field full"><label>דרישות</label><textarea id="job-requirements">${escapeHtml(job.requirements)}</textarea></div>
+            <div class="field full"><label>יתרונות / תנאים</label><textarea id="job-benefits">${escapeHtml(job.benefits)}</textarea></div>
           </div>
           <div class="dialog-foot"><button class="primary">שמור משרה</button></div>
         </form>`;
@@ -789,13 +792,16 @@
         category: document.getElementById('job-category').value,
         profession: document.getElementById('job-category').value,
         area: document.getElementById('job-area').value,
+        address: document.getElementById('job-address').value,
         hourlyRate: Number(document.getElementById('job-hourlyRate').value || 0),
         hours: document.getElementById('job-hours').value,
+        days: document.getElementById('job-days').value.split(',').map(x => x.trim()).filter(Boolean),
         employerName: document.getElementById('job-employerName').value,
         status: document.getElementById('job-status').value,
         jobType: document.getElementById('job-jobType').value,
         description: document.getElementById('job-description').value,
-        requirements: document.getElementById('job-requirements').value
+        requirements: document.getElementById('job-requirements').value,
+        benefits: document.getElementById('job-benefits').value
       };
       await api(id ? `/api/admin/jobs/${id}` : '/api/admin/jobs', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
       closeModal('jobModal');
@@ -872,6 +878,7 @@
             <td>${escapeHtml(agreementStatusLabels[a.status] || a.status)}</td>
             <td><div class="row-actions">
               <button onclick="sendAgreement('${a._id}')">שלח לחתימה</button>
+              <button onclick="copyAgreementLink('${a.token}')">העתק קישור</button>
               ${a.candidate?._id ? `<button onclick="openCandidate('${a.candidate._id}')">פתח מועמד</button>` : ''}
               <button class="blue" onclick="markStartedWork('${a._id}')">העובד התחיל לעבוד</button>
               <button class="blue" onclick="markAgreementPaid('${a._id}', ${Number(a.placementFee || 0)})">סמן כשולם</button>
@@ -951,9 +958,26 @@
     }
 
     async function sendAgreement(id) {
-      const result = await api(`/api/agreements/admin/${id}/send`, { method: 'POST', body: JSON.stringify({}) });
-      showToast(result.link ? 'ההסכם נשלח לחתימה' : 'ההסכם עודכן');
-      loadAgreements();
+      try {
+        const result = await api(`/api/agreements/admin/${id}/send`, { method: 'POST', body: JSON.stringify({}) });
+        if (result.link) await copyText(result.link);
+        showToast(result.skipped ? 'SMTP לא מוגדר. הקישור הועתק, אפשר לשלוח ידנית.' : 'ההסכם נשלח לחתימה והקישור הועתק.');
+        loadAgreements();
+      } catch (err) {
+        showToast(`שליחת ההסכם נכשלה: ${err.message}`);
+      }
+    }
+    async function copyAgreementLink(token) {
+      const link = `${location.origin}/pages/sign-agreement.html?token=${token}`;
+      await copyText(link);
+      showToast('קישור החתימה הועתק');
+    }
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (err) {
+        prompt('העתק את הקישור:', text);
+      }
     }
     async function markStartedWork(id) {
       const startedWorkingAt = prompt('תאריך תחילת עבודה YYYY-MM-DD');

@@ -165,7 +165,7 @@ router.post('/admin/:id/send', ...adminOnly, async (req, res) => {
     await agreement.save();
 
     const link = `${appBaseUrl(req)}/pages/sign-agreement.html?token=${agreement.token}`;
-    await sendMail({
+    const mailResult = await sendMail({
       to: agreement.contactEmail,
       replyTo: process.env.MAIL_REPLY_TO || process.env.SMTP_USER,
       subject: `הסכם השמה לחתימה - ${agreement.candidateName || agreement.jobTitle}`,
@@ -178,10 +178,10 @@ router.post('/admin/:id/send', ...adminOnly, async (req, res) => {
       ].join('\n')
     });
 
-    res.json({ message: 'Agreement sent', link });
+    res.json({ message: mailResult?.skipped ? 'SMTP is not configured' : 'Agreement sent', link, skipped: !!mailResult?.skipped });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Could not send agreement' });
+    res.status(500).json({ error: err.message || 'Could not send agreement' });
   }
 });
 

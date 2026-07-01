@@ -176,6 +176,19 @@
       line-height: 1.55;
       flex: 1;
     }
+    .job-details {
+      display: grid;
+      gap: 8px;
+      color: #344054;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      margin-top: -4px;
+    }
+    .job-details div {
+      border-top: 1px solid var(--line);
+      padding-top: 8px;
+    }
+    .job-details strong { color: var(--ink); }
     .empty, .loading {
       grid-column: 1 / -1;
       background: #fff;
@@ -383,7 +396,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <footer class="site-footer">v1.2.0 · L.K Consulting <a href="/pages/login.html">כניסת אדמין</a></footer>
+  <footer class="site-footer">v1.2.1 · L.K Consulting <a href="/pages/login.html">כניסת אדמין</a></footer>
 
   <script>
     let jobs = [];
@@ -424,7 +437,7 @@
       const category = document.getElementById('category').value;
       const area = document.getElementById('area').value;
       const filtered = jobs.filter(job => {
-        const text = [job.title, job.area, job.category, job.profession, job.description].join(' ').toLowerCase();
+        const text = [job.title, job.area, job.category, job.profession, job.description, job.requirements, job.benefits, job.address, job.employerName].join(' ').toLowerCase();
         return (!q || text.includes(q)) &&
           (!category || (job.category || job.profession) === category) &&
           (!area || job.area === area);
@@ -445,7 +458,14 @@
             </div>
           </div>
           ${job.hourlyRate ? `<div class="pay">₪${fmt(job.hourlyRate)} לשעה</div>` : ''}
-          <div class="desc">${escapeHtml(job.description || job.requirements || 'פרטים נוספים יימסרו בשיחה.')}</div>
+          <div class="desc">${escapeHtml(job.description || 'פרטים נוספים יימסרו בשיחה.')}</div>
+          <div class="job-details">
+            ${job.requirements ? `<div><strong>דרישות:</strong> ${escapeHtml(job.requirements)}</div>` : ''}
+            ${job.benefits ? `<div><strong>יתרונות / תנאים:</strong> ${escapeHtml(job.benefits)}</div>` : ''}
+            ${job.address ? `<div><strong>כתובת:</strong> ${escapeHtml(job.address)}</div>` : ''}
+            ${job.days?.length ? `<div><strong>ימים:</strong> ${escapeHtml(job.days.join(', '))}</div>` : ''}
+            ${job.employerName ? `<div><strong>מעסיק:</strong> ${escapeHtml(job.employerName)}</div>` : ''}
+          </div>
           <button class="primary" onclick="openApply('${job._id}', '${escapeHtml(job.title)}')">אני מעוניין / יצירת קשר</button>
         </article>
       `).join('') : '<div class="empty">לא נמצאו משרות תואמות.</div>';
