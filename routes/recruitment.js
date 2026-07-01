@@ -6,6 +6,7 @@ const Candidate = require('../models/Candidate');
 const EmployerContact = require('../models/EmployerContact');
 const EmployerSubmission = require('../models/EmployerSubmission');
 const Job = require('../models/Job');
+const PlacementAgreement = require('../models/PlacementAgreement');
 const { auth, requireRole } = require('../middleware/auth');
 const { sendMailWithTimeout } = require('../lib/mailer');
 
@@ -72,6 +73,69 @@ function selectedCandidateNotes(candidate, types) {
     .filter(note => types.includes(note.type))
     .map(note => `- ${noteLabels[note.type] || note.type}: ${note.text}`)
     .join('\n');
+}
+
+function signedAgreementSummary(agreement) {
+  return [
+    'הסכם השמה חתום',
+    '',
+    `עסק: ${agreement.businessName || '-'}`,
+    `ח.פ.: ${agreement.businessId || '-'}`,
+    `איש קשר: ${agreement.contactName || '-'}`,
+    `טלפון: ${agreement.contactPhone || '-'}`,
+    `אימייל: ${agreement.contactEmail || '-'}`,
+    '',
+    `מועמד: ${agreement.candidateName || '-'}`,
+    `תעודת זהות: ${agreement.candidateIdentityNumber || '-'}`,
+    `טלפון מועמד: ${agreement.candidatePhone || '-'}`,
+    `תפקיד: ${agreement.candidateRole || agreement.jobTitle || '-'}`,
+    '',
+    `דמי השמה: ₪${Number(agreement.placementFee || 0).toLocaleString('he-IL')} + מע"מ ${agreement.vatPercent || 0}%`,
+    `תאריך חתימה: ${agreement.signedAt ? agreement.signedAt.toLocaleString('he-IL') : '-'}`,
+    '',
+    'פרטי חתימה דיגיטלית',
+    `שם החותם: ${agreement.signerName || '-'}`,
+    `תפקיד: ${agreement.signerRole || '-'}`,
+    `טלפון: ${agreement.signerPhone || '-'}`,
+    `אימייל: ${agreement.signerEmail || '-'}`,
+    `Signature ID: ${agreement.signatureId || '-'}`,
+    `IP: ${agreement.signatureIp || '-'}`
+  ].join('\n');
+}
+
+function signedAgreementAttachment(agreement) {
+  const html = `
+    <html lang="he" dir="rtl">
+      <head><meta charset="UTF-8"></head>
+      <body style="font-family:Arial,sans-serif;line-height:1.7;color:#111">
+        <pre style="white-space:pre-wrap;font-family:Arial,sans-serif">${signedAgreementSummary(agreement)}</pre>
+        ${agreement.signatureDataUrl ? `<h3>חתימה</h3><img src="${agreement.signatureDataUrl}" style="max-width:360px;border:1px solid #ddd;padding:10px">` : ''}
+      </body>
+    </html>
+  `;
+  return {
+    filename: `signed-placement-agreement-${agreement.candidateName || 'candidate'}.html`.replace(/[^\w.-]+/g, '_'),
+    content: Buffer.from(html, 'utf8').toString('base64')
+  };
+}
+
+async function findSignedAgreementsForCandidate(candidate, { employerContact, employerEmail } = {}) {
+  const or = [{ candidate: candidate._id }];
+  if (candidate.identityNumber) or.push({ candidateIdentityNumber: candidate.identityNumber });
+  if (candidate.phone) or.push({ candidatePhone: candidate.phone });
+  if (candidate.fullName) or.push({ candidateName: candidate.fullName });
+
+  const filter = { status: 'signed', $or: or };
+  const and = [];
+  if (employerContact) and.push({ employerContact });
+  if (employerEmail) and.push({ contactEmail: new RegExp(`^${escapeRegExp(employerEmail)}$`, 'i') });
+  if (and.length) filter.$and = and;
+
+  return PlacementAgreement.find(filter).sort({ signedAt: -1, updatedAt: -1 }).limit(20);
+}
+
+function escapeRegExp(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function latestApplication(candidate) {
@@ -400,6 +464,31 @@ router.get('/admin/submissions', ...adminOnly, async (req, res) => {
   }
 });
 
+router.get('/admin/candidates/:id/signed-agreements', ...adminOnly, async (req, res) => {
+  try {
+    const candidate = await Candidate.findById(req.params.id);
+    if (!candidate) return res.status(404).json({ error: 'Candidate not found' });
+
+    const agreements = await findSignedAgreementsForCandidate(candidate, {
+      employerContact: req.query.employerContact || undefined,
+      employerEmail: req.query.employerEmail || undefined
+    });
+
+    res.json(agreements.map(agreement => ({
+      _id: agreement._id,
+      businessName: agreement.businessName,
+      contactEmail: agreement.contactEmail,
+      candidateName: agreement.candidateName,
+      jobTitle: agreement.jobTitle,
+      signedAt: agreement.signedAt,
+      signerName: agreement.signerName
+    })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Could not load signed agreements' });
+  }
+});
+
 router.post('/admin/candidates/:id/send-to-employer', ...adminOnly, async (req, res) => {
   try {
     const candidate = await Candidate.findById(req.params.id);
@@ -414,6 +503,7 @@ router.post('/admin/candidates/:id/send-to-employer', ...adminOnly, async (req, 
     if (!employerEmail) return res.status(400).json({ error: 'Employer email is required' });
 
     const shareableTypes = [];
+    if (req.body.includeGeneralNotes !== false) shareableTypes.push('general');
     if (req.body.includePhoneNotes !== false) shareableTypes.push('phone_call');
     if (req.body.includeInterviewNotes !== false) shareableTypes.push('front_interview');
     if (req.body.includeShareableNotes !== false) shareableTypes.push('shareable');
@@ -423,6 +513,39 @@ router.post('/admin/candidates/:id/send-to-employer', ...adminOnly, async (req, 
 
     const hideEmployerRecipient = process.env.HIDE_EMPLOYER_RECIPIENT === 'true';
     const visibleRecipient = process.env.MAIL_VISIBLE_TO || process.env.SMTP_USER;
+    const attachments = [];
+    const warnings = [];
+    let cvAttached = false;
+    let signedAgreementAttached = false;
+
+    if (req.body.includeCv !== false) {
+      if (candidate.cv?.path && fs.existsSync(candidate.cv.path)) {
+        attachments.push({ filename: candidate.cv.originalName || 'candidate-cv', path: candidate.cv.path });
+        cvAttached = true;
+      } else if (candidate.cv?.originalName || candidate.cv?.url) {
+        warnings.push('CV file was requested but the file is missing on the server');
+      }
+    }
+
+    if (req.body.includeSignedAgreement) {
+      let signedAgreement = null;
+      if (req.body.signedAgreementId) {
+        signedAgreement = await PlacementAgreement.findOne({ _id: req.body.signedAgreementId, status: 'signed' });
+      } else {
+        const signedAgreements = await findSignedAgreementsForCandidate(candidate, {
+          employerContact: employer?._id,
+          employerEmail
+        });
+        signedAgreement = signedAgreements[0] || null;
+      }
+
+      if (signedAgreement) {
+        attachments.push(signedAgreementAttachment(signedAgreement));
+        signedAgreementAttached = true;
+      } else {
+        warnings.push('Signed placement agreement was requested but no signed agreement was found for this candidate and employer');
+      }
+    }
 
     const mailResult = await sendMailWithTimeout({
       to: hideEmployerRecipient ? visibleRecipient : employerEmail,
@@ -446,9 +569,7 @@ router.post('/admin/candidates/:id/send-to-employer', ...adminOnly, async (req, 
         '',
         candidate.cv?.path && req.body.includeCv !== false ? 'קורות החיים מצורפים למייל זה.' : 'קורות חיים לא צורפו למייל זה.'
       ].join('\n'),
-      attachments: req.body.includeCv !== false && candidate.cv?.path
-        ? [{ filename: candidate.cv.originalName || 'candidate-cv', path: candidate.cv.path }]
-        : []
+      attachments
     });
 
     const submission = new EmployerSubmission({
@@ -480,7 +601,10 @@ router.post('/admin/candidates/:id/send-to-employer', ...adminOnly, async (req, 
       submission,
       emailSent: !mailResult?.skipped,
       emailError: mailResult?.error || '',
-      timeout: !!mailResult?.timeout
+      timeout: !!mailResult?.timeout,
+      cvAttached,
+      signedAgreementAttached,
+      warnings
     });
   } catch (err) {
     console.error(err);

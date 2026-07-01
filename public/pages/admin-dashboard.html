@@ -303,7 +303,7 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.2.7</div>
+      <div class="version-chip">v1.2.8</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
@@ -392,7 +392,7 @@
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.2.7 · L.K Consulting</footer>
+      <footer class="site-footer">v1.2.8 · L.K Consulting</footer>
     </main>
   </div>
 
@@ -618,17 +618,24 @@
 
             <div id="tab-send" class="tab-panel">
               <div class="grid">
-                <div class="field"><label>מעסיק שמור</label><select id="sendEmployer"><option value="">בחירה ידנית</option>${state.employers.map(e => `<option value="${e._id}">${escapeHtml(e.businessName)} ${e.email ? '- ' + escapeHtml(e.email) : ''}</option>`).join('')}</select></div>
-                <div class="field"><label>אימייל מעסיק</label><input id="sendEmployerEmail" type="email"></div>
+                <div class="field"><label>מעסיק שמור</label><select id="sendEmployer" onchange="fillSendEmployer(); loadCandidateSignedAgreements();"><option value="">בחירה ידנית</option>${state.employers.map(e => `<option value="${e._id}">${escapeHtml(e.businessName)} ${e.email ? '- ' + escapeHtml(e.email) : ''}</option>`).join('')}</select></div>
+                <div class="field"><label>אימייל מעסיק</label><input id="sendEmployerEmail" type="email" onblur="loadCandidateSignedAgreements()"></div>
                 <div class="field"><label>שם עסק / מעסיק</label><input id="sendEmployerName"></div>
                 <div class="field"><label>שם משרה</label><input id="sendJobTitle" value="${escapeHtml(candidate.applications?.[candidate.applications.length - 1]?.jobTitle || '')}"></div>
                 <div class="field full"><label>הודעה למעסיק</label><textarea id="sendMessage">שלום, מצורפים פרטי מועמד לבדיקה.</textarea></div>
               </div>
               <div class="chips" style="margin-bottom:14px">
                 <label class="chip"><input type="checkbox" id="sendCv" checked> קורות חיים</label>
+                <label class="chip"><input type="checkbox" id="sendGeneral" checked> הערות כלליות</label>
                 <label class="chip"><input type="checkbox" id="sendPhone" checked> סיכום שיחה</label>
                 <label class="chip"><input type="checkbox" id="sendInterview" checked> סיכום ראיון</label>
                 <label class="chip"><input type="checkbox" id="sendShareable" checked> הערות שמותר לשלוח</label>
+                <label class="chip"><input type="checkbox" id="sendSignedAgreement" checked onchange="loadCandidateSignedAgreements()"> טופס השמה חתום</label>
+              </div>
+              <div class="field full">
+                <label>טופס השמה חתום לצירוף</label>
+                <select id="sendSignedAgreementId"><option value="">בדיקה אוטומטית לפי המועמד והמעסיק</option></select>
+                <div class="muted" id="signedAgreementHint" style="margin-top:6px">המערכת תבדוק אם קיים טופס חתום למועמד ולמעסיק.</div>
               </div>
               <button class="blue" onclick="sendToEmployer()">שלח למעסיק</button>
             </div>
@@ -651,6 +658,7 @@
           </div>
         </div>`;
       modal.classList.add('open');
+      setTimeout(() => loadCandidateSignedAgreements().catch(() => {}), 50);
     }
     function inputField(id, label, value = '') {
       return `<div class="field"><label>${label}</label><input id="candidateEdit-${id}" value="${escapeHtml(value)}"></div>`;
@@ -702,8 +710,44 @@
       showToast('הערה נוספה');
       await openCandidate(c._id);
     }
+
+    function fillSendEmployer() {
+      const employer = state.employers.find(e => e._id === document.getElementById('sendEmployer').value);
+      if (!employer) return;
+      document.getElementById('sendEmployerEmail').value = employer.email || '';
+      document.getElementById('sendEmployerName').value = employer.businessName || employer.contactName || '';
+    }
+
+    async function loadCandidateSignedAgreements() {
+      const c = state.currentCandidate;
+      const checkbox = document.getElementById('sendSignedAgreement');
+      const select = document.getElementById('sendSignedAgreementId');
+      const hint = document.getElementById('signedAgreementHint');
+      if (!c || !checkbox || !select || !checkbox.checked) return;
+      const params = new URLSearchParams();
+      const employerContact = document.getElementById('sendEmployer')?.value || '';
+      const employerEmail = document.getElementById('sendEmployerEmail')?.value || '';
+      if (employerContact) params.set('employerContact', employerContact);
+      if (employerEmail) params.set('employerEmail', employerEmail);
+      select.innerHTML = '<option value="">בודק טפסים חתומים...</option>';
+      try {
+        const agreements = await api(`/api/recruitment/admin/candidates/${c._id}/signed-agreements?${params}`);
+        select.innerHTML = '<option value="">צרף אוטומטית את האחרון שנחתם</option>' + agreements.map(a => `<option value="${a._id}">${escapeHtml(a.businessName || a.contactEmail || 'טופס חתום')} | ${escapeHtml(a.jobTitle || '-')} | ${fmtDate(a.signedAt)}</option>`).join('');
+        hint.textContent = agreements.length ? `נמצאו ${agreements.length} טפסים חתומים מתאימים.` : 'לא נמצא טופס חתום למועמד ולמעסיק הזה.';
+      } catch (err) {
+        select.innerHTML = '<option value="">לא ניתן לבדוק טפסים חתומים</option>';
+        hint.textContent = err.message || 'לא ניתן לבדוק טפסים חתומים.';
+      }
+    }
+
     async function sendToEmployer() {
       const c = state.currentCandidate;
+      const includeSignedAgreement = document.getElementById('sendSignedAgreement').checked;
+      if (includeSignedAgreement) {
+        await loadCandidateSignedAgreements();
+        const hasSignedAgreement = Array.from(document.getElementById('sendSignedAgreementId').options).some(option => option.value);
+        if (!hasSignedAgreement && !confirm('לא נמצא טופס השמה חתום למועמד ולמעסיק הזה. לשלוח בכל זאת בלי טופס חתום?')) return;
+      }
       const body = {
         employerContact: document.getElementById('sendEmployer').value || undefined,
         employerEmail: document.getElementById('sendEmployerEmail').value,
@@ -711,13 +755,16 @@
         jobTitle: document.getElementById('sendJobTitle').value,
         message: document.getElementById('sendMessage').value,
         includeCv: document.getElementById('sendCv').checked,
+        includeGeneralNotes: document.getElementById('sendGeneral').checked,
         includePhoneNotes: document.getElementById('sendPhone').checked,
         includeInterviewNotes: document.getElementById('sendInterview').checked,
-        includeShareableNotes: document.getElementById('sendShareable').checked
+        includeShareableNotes: document.getElementById('sendShareable').checked,
+        includeSignedAgreement,
+        signedAgreementId: document.getElementById('sendSignedAgreementId').value || undefined
       };
       const result = await api(`/api/recruitment/admin/candidates/${c._id}/send-to-employer`, { method: 'POST', body: JSON.stringify(body) });
       const message = result.emailSent
-        ? 'המועמד נשלח למעסיק'
+        ? ['המועמד נשלח למעסיק', ...(result.warnings || [])].join('\n')
         : `פרטי המועמד נשמרו, אבל המייל לא נשלח: ${result.emailError || 'ספק המייל לא תקין'}`;
       showToast(message);
       alert(message);
