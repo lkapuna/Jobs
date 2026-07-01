@@ -187,7 +187,7 @@ router.post('/admin/:id/send', ...adminOnly, async (req, res) => {
     });
 
     res.json({
-      message: mailResult?.timeout ? 'Email timed out' : mailResult?.skipped ? 'SMTP is not configured' : 'Agreement sent',
+      message: mailResult?.timeout ? 'Email timed out' : mailResult?.skipped ? 'Email provider is not configured or delivery failed' : 'Agreement sent',
       link,
       skipped: !!mailResult?.skipped,
       timeout: !!mailResult?.timeout,
@@ -233,7 +233,7 @@ router.post('/admin/:id/send-signed', ...adminOnly, async (req, res) => {
     });
 
     res.json({
-      message: mailResult?.timeout ? 'Email timed out' : mailResult?.skipped ? 'SMTP is not configured' : 'Signed agreement sent',
+      message: mailResult?.timeout ? 'Email timed out' : mailResult?.skipped ? 'Email provider is not configured or delivery failed' : 'Signed agreement sent',
       skipped: !!mailResult?.skipped,
       timeout: !!mailResult?.timeout,
       emailError: mailResult?.error || ''

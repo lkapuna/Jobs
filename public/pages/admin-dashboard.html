@@ -303,7 +303,7 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.2.6</div>
+      <div class="version-chip">v1.2.7</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
@@ -392,7 +392,7 @@
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.2.6 · L.K Consulting</footer>
+      <footer class="site-footer">v1.2.7 · L.K Consulting</footer>
     </main>
   </div>
 
@@ -506,9 +506,9 @@
     async function sendTestEmail() {
       const result = await api('/api/recruitment/admin/test-email', { method: 'POST', body: JSON.stringify({}) });
       const message = result.timeout
-        ? 'בדיקת המייל נכשלה: החיבור ל-SMTP נתקע.'
+        ? 'בדיקת המייל נכשלה: החיבור לספק המייל נתקע.'
         : result.skipped
-          ? `בדיקת המייל נכשלה: ${result.emailError || 'SMTP לא מוגדר או לא תקין.'}`
+          ? `בדיקת המייל נכשלה: ${result.emailError || 'ספק המייל לא מוגדר או לא תקין.'}`
           : 'מייל בדיקה נשלח למייל הראשי.';
       showToast(message);
       alert(message);
@@ -718,7 +718,7 @@
       const result = await api(`/api/recruitment/admin/candidates/${c._id}/send-to-employer`, { method: 'POST', body: JSON.stringify(body) });
       const message = result.emailSent
         ? 'המועמד נשלח למעסיק'
-        : `פרטי המועמד נשמרו, אבל המייל לא נשלח: ${result.emailError || 'SMTP לא תקין'}`;
+        : `פרטי המועמד נשמרו, אבל המייל לא נשלח: ${result.emailError || 'ספק המייל לא תקין'}`;
       showToast(message);
       alert(message);
       await openCandidate(c._id);
@@ -736,7 +736,7 @@
       });
       const message = result.emailSent
         ? 'טופס החתימה נשלח למעסיק'
-        : `טופס החתימה נשמר, אבל המייל לא נשלח: ${result.emailError || 'SMTP לא תקין'}`;
+        : `טופס החתימה נשמר, אבל המייל לא נשלח: ${result.emailError || 'ספק המייל לא תקין'}`;
       showToast(message);
       alert(message);
       await openCandidate(c._id);
@@ -1014,9 +1014,9 @@
         const result = await api(`/api/agreements/admin/${id}/send`, { method: 'POST', body: JSON.stringify({}) });
         if (result.link) await copyText(result.link);
         const message = result.timeout
-          ? 'החיבור למייל נתקע או נחסם. הקישור הועתק, אפשר לשלוח ידנית.'
+          ? `החיבור למייל נתקע או נחסם. הקישור הועתק, אפשר לשלוח ידנית. ${result.emailError || ''}`
           : result.skipped
-            ? 'SMTP לא מוגדר או שהשליחה נכשלה. הקישור הועתק, אפשר לשלוח ידנית.'
+            ? `המייל לא נשלח: ${result.emailError || 'ספק המייל לא מוגדר או שהשליחה נכשלה.'} הקישור הועתק, אפשר לשלוח ידנית.`
             : 'ההסכם נשלח לחתימה והקישור הועתק.';
         statusBox.textContent = message;
         showToast(message);
@@ -1126,9 +1126,9 @@
         const email = document.getElementById('signedAgreementEmail').value;
         const result = await api(`/api/agreements/admin/${id}/send-signed`, { method: 'POST', body: JSON.stringify({ email }) });
         const message = result.timeout
-          ? 'החיבור למייל נתקע או נחסם. ההסכם לא נשלח במייל.'
+          ? `החיבור למייל נתקע או נחסם. ההסכם לא נשלח במייל. ${result.emailError || ''}`
           : result.skipped
-            ? 'SMTP לא מוגדר או שהשליחה נכשלה.'
+            ? `המייל לא נשלח: ${result.emailError || 'ספק המייל לא מוגדר או שהשליחה נכשלה.'}`
             : 'ההסכם החתום נשלח במייל.';
         statusBox.textContent = message;
         showToast(message);

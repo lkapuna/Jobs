@@ -573,10 +573,10 @@ router.post('/admin/test-email', ...adminOnly, async (req, res) => {
     const result = await sendMailWithTimeout({
       to,
       subject: 'בדיקת מייל - א.ש השמת עובדים',
-      text: 'אם קיבלת את המייל הזה, הגדרות ה-SMTP ב-Render תקינות.'
+      text: 'אם קיבלת את המייל הזה, הגדרות המייל ב-Render תקינות.'
     });
     res.json({
-      message: result?.timeout ? 'Email timed out' : result?.skipped ? 'SMTP is not configured' : 'Test email sent',
+      message: result?.timeout ? 'Email timed out' : result?.skipped ? 'Email provider is not configured or delivery failed' : 'Test email sent',
       skipped: !!result?.skipped,
       timeout: !!result?.timeout,
       emailError: result?.error || ''
