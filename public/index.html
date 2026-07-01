@@ -396,7 +396,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <footer class="site-footer">v1.2.9 · L.K Consulting <a href="/pages/login.html">כניסת אדמין</a></footer>
+  <footer class="site-footer">v1.2.11 · L.K Consulting <a href="/pages/login.html">כניסת אדמין</a></footer>
 
   <script>
     let jobs = [];
@@ -509,7 +509,7 @@
             <button class="primary" onclick="closeApply()">סגור</button>
           </div>
         `);
-        showToast(data.emailSent === false ? 'הפרטים נשמרו במערכת. בדוק הגדרות מייל באדמין.' : 'הפרטים נשלחו בהצלחה.');
+        showToast('הפרטים נשלחו בהצלחה.');
       } catch (err) {
         showToast(err.message || 'לא ניתן לשלוח כרגע.');
       } finally {

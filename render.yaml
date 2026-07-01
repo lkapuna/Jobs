@@ -24,6 +24,12 @@ services:
         value: alef.shin.jobs@gmail.com
       - key: SMTP_PASS
         sync: false
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false
       - key: MAIL_FROM
         value: א.ש השמת עובדים <alef.shin.jobs@gmail.com>
       - key: MAIL_REPLY_TO
