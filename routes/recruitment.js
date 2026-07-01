@@ -1,6 +1,5 @@
 const express = require('express');
 const multer = require('multer');
-const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
 const Candidate = require('../models/Candidate');
@@ -8,6 +7,7 @@ const EmployerContact = require('../models/EmployerContact');
 const EmployerSubmission = require('../models/EmployerSubmission');
 const Job = require('../models/Job');
 const { auth, requireRole } = require('../middleware/auth');
+const { sendMailWithTimeout } = require('../lib/mailer');
 
 const router = express.Router();
 const adminOnly = [auth, requireRole('admin')];
@@ -36,48 +36,6 @@ const upload = multer({
     cb(null, true);
   }
 });
-
-function mailTransport() {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) return null;
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_SECURE === 'true',
-    connectionTimeout: 8000,
-    greetingTimeout: 8000,
-    socketTimeout: 10000,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-  });
-}
-
-async function sendMail(options) {
-  const transport = mailTransport();
-  if (!transport) {
-    console.warn('SMTP is not configured. Email skipped:', options.subject);
-    return { skipped: true };
-  }
-  return transport.sendMail({
-    from: process.env.MAIL_FROM || process.env.SMTP_USER,
-    ...options
-  });
-}
-
-async function sendMailWithTimeout(options, timeoutMs = 10000) {
-  const result = await Promise.race([
-    sendMail(options).catch(error => ({
-      skipped: true,
-      error: error.message || 'Email failed',
-      code: error.code || ''
-    })),
-    new Promise(resolve => {
-      setTimeout(() => {
-        resolve({ skipped: true, timeout: true, error: 'Email connection timeout' });
-      }, timeoutMs);
-    })
-  ]);
-  if (result?.error) console.error('Email delivery failed:', result);
-  return result;
-}
 
 const categoryList = value =>
   String(value || '')
