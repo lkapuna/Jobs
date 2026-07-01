@@ -43,6 +43,9 @@ function mailTransport() {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
     secure: process.env.SMTP_SECURE === 'true',
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 10000,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
   });
 }
@@ -57,6 +60,23 @@ async function sendMail(options) {
     from: process.env.MAIL_FROM || process.env.SMTP_USER,
     ...options
   });
+}
+
+async function sendMailWithTimeout(options, timeoutMs = 10000) {
+  const result = await Promise.race([
+    sendMail(options).catch(error => ({
+      skipped: true,
+      error: error.message || 'Email failed',
+      code: error.code || ''
+    })),
+    new Promise(resolve => {
+      setTimeout(() => {
+        resolve({ skipped: true, timeout: true, error: 'Email connection timeout' });
+      }, timeoutMs);
+    })
+  ]);
+  if (result?.error) console.error('Email delivery failed:', result);
+  return result;
 }
 
 const categoryList = value =>
@@ -204,8 +224,9 @@ router.post('/public/apply', upload.single('cv'), async (req, res) => {
 
     let emailSent = false;
     let emailError = '';
+    let emailTimeout = false;
     try {
-      const mailResult = await sendMail({
+      const mailResult = await sendMailWithTimeout({
         to: process.env.ADMIN_EMAIL || 'alef.shin.jobs@gmail.com',
         replyTo: candidate.email || undefined,
         subject: `פנייה חדשה למשרה: ${job.title}`,
@@ -226,6 +247,8 @@ router.post('/public/apply', upload.single('cv'), async (req, res) => {
         attachments: req.file ? [{ filename: req.file.originalname, path: req.file.path }] : []
       });
       emailSent = !mailResult?.skipped;
+      emailError = mailResult?.error || '';
+      emailTimeout = !!mailResult?.timeout;
     } catch (mailErr) {
       emailError = mailErr.message || 'Email failed';
       console.error('Candidate notification email failed:', mailErr);
@@ -235,7 +258,8 @@ router.post('/public/apply', upload.single('cv'), async (req, res) => {
       message: 'Application received',
       candidateId: candidate._id,
       emailSent,
-      emailError
+      emailError,
+      timeout: emailTimeout
     });
   } catch (err) {
     console.error(err);
@@ -442,7 +466,7 @@ router.post('/admin/candidates/:id/send-to-employer', ...adminOnly, async (req, 
     const hideEmployerRecipient = process.env.HIDE_EMPLOYER_RECIPIENT === 'true';
     const visibleRecipient = process.env.MAIL_VISIBLE_TO || process.env.SMTP_USER;
 
-    await sendMail({
+    const mailResult = await sendMailWithTimeout({
       to: hideEmployerRecipient ? visibleRecipient : employerEmail,
       bcc: hideEmployerRecipient ? employerEmail : undefined,
       replyTo: process.env.MAIL_REPLY_TO || undefined,
@@ -493,7 +517,13 @@ router.post('/admin/candidates/:id/send-to-employer', ...adminOnly, async (req, 
     });
     await candidate.save();
 
-    res.status(201).json({ message: 'Candidate sent to employer', submission });
+    res.status(201).json({
+      message: 'Candidate sent to employer',
+      submission,
+      emailSent: !mailResult?.skipped,
+      emailError: mailResult?.error || '',
+      timeout: !!mailResult?.timeout
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Could not send candidate' });
@@ -537,7 +567,7 @@ router.post('/admin/candidates/:id/send-placement-agreement', ...adminOnly, asyn
       </div>
     `;
 
-    await sendMail({
+    const mailResult = await sendMailWithTimeout({
       to: employerEmail,
       replyTo: process.env.MAIL_REPLY_TO || process.env.SMTP_USER,
       subject: `טופס אישור דמי השמה - ${candidate.fullName}`,
@@ -563,7 +593,12 @@ router.post('/admin/candidates/:id/send-placement-agreement', ...adminOnly, asyn
     });
     await candidate.save();
 
-    res.status(201).json({ message: 'Placement agreement sent' });
+    res.status(201).json({
+      message: 'Placement agreement sent',
+      emailSent: !mailResult?.skipped,
+      emailError: mailResult?.error || '',
+      timeout: !!mailResult?.timeout
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Could not send placement agreement' });
@@ -577,12 +612,17 @@ router.get('/admin/statuses', ...adminOnly, (req, res) => {
 router.post('/admin/test-email', ...adminOnly, async (req, res) => {
   try {
     const to = process.env.ADMIN_EMAIL || 'alef.shin.jobs@gmail.com';
-    const result = await sendMail({
+    const result = await sendMailWithTimeout({
       to,
       subject: 'בדיקת מייל - א.ש השמת עובדים',
       text: 'אם קיבלת את המייל הזה, הגדרות ה-SMTP ב-Render תקינות.'
     });
-    res.json({ message: result?.skipped ? 'SMTP is not configured' : 'Test email sent', skipped: !!result?.skipped });
+    res.json({
+      message: result?.timeout ? 'Email timed out' : result?.skipped ? 'SMTP is not configured' : 'Test email sent',
+      skipped: !!result?.skipped,
+      timeout: !!result?.timeout,
+      emailError: result?.error || ''
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message || 'Could not send test email' });

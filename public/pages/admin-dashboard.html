@@ -303,7 +303,7 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.2.4</div>
+      <div class="version-chip">v1.2.5</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
@@ -392,7 +392,7 @@
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.2.4 · L.K Consulting</footer>
+      <footer class="site-footer">v1.2.5 · L.K Consulting</footer>
     </main>
   </div>
 
@@ -505,7 +505,13 @@
 
     async function sendTestEmail() {
       const result = await api('/api/recruitment/admin/test-email', { method: 'POST', body: JSON.stringify({}) });
-      showToast(result.skipped ? 'SMTP לא מוגדר ב-Render ולכן לא נשלח מייל.' : 'מייל בדיקה נשלח למייל הראשי.');
+      const message = result.timeout
+        ? 'בדיקת המייל נכשלה: החיבור ל-SMTP נתקע.'
+        : result.skipped
+          ? `בדיקת המייל נכשלה: ${result.emailError || 'SMTP לא מוגדר או לא תקין.'}`
+          : 'מייל בדיקה נשלח למייל הראשי.';
+      showToast(message);
+      alert(message);
     }
 
     async function loadOverview() {
@@ -709,13 +715,17 @@
         includeInterviewNotes: document.getElementById('sendInterview').checked,
         includeShareableNotes: document.getElementById('sendShareable').checked
       };
-      await api(`/api/recruitment/admin/candidates/${c._id}/send-to-employer`, { method: 'POST', body: JSON.stringify(body) });
-      showToast('המועמד נשלח למעסיק');
+      const result = await api(`/api/recruitment/admin/candidates/${c._id}/send-to-employer`, { method: 'POST', body: JSON.stringify(body) });
+      const message = result.emailSent
+        ? 'המועמד נשלח למעסיק'
+        : `פרטי המועמד נשמרו, אבל המייל לא נשלח: ${result.emailError || 'SMTP לא תקין'}`;
+      showToast(message);
+      alert(message);
       await openCandidate(c._id);
     }
     async function sendPlacementAgreement() {
       const c = state.currentCandidate;
-      await api(`/api/recruitment/admin/candidates/${c._id}/send-placement-agreement`, {
+      const result = await api(`/api/recruitment/admin/candidates/${c._id}/send-placement-agreement`, {
         method: 'POST',
         body: JSON.stringify({
           employerEmail: document.getElementById('agreementEmployerEmail').value,
@@ -724,7 +734,11 @@
           feeTerms: document.getElementById('agreementTerms').value
         })
       });
-      showToast('טופס החתימה נשלח למעסיק');
+      const message = result.emailSent
+        ? 'טופס החתימה נשלח למעסיק'
+        : `טופס החתימה נשמר, אבל המייל לא נשלח: ${result.emailError || 'SMTP לא תקין'}`;
+      showToast(message);
+      alert(message);
       await openCandidate(c._id);
     }
     function candidateSummary(c = state.currentCandidate) {

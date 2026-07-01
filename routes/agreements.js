@@ -36,14 +36,20 @@ async function sendMail(options) {
 }
 
 async function sendMailWithTimeout(options, timeoutMs = 10000) {
-  return Promise.race([
-    sendMail(options),
+  const result = await Promise.race([
+    sendMail(options).catch(error => ({
+      skipped: true,
+      error: error.message || 'Email failed',
+      code: error.code || ''
+    })),
     new Promise(resolve => {
       setTimeout(() => {
         resolve({ skipped: true, timeout: true, error: 'Email connection timeout' });
       }, timeoutMs);
     })
   ]);
+  if (result?.error) console.error('Email delivery failed:', result);
+  return result;
 }
 
 function appBaseUrl(req) {
