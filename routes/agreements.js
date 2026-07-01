@@ -264,10 +264,23 @@ router.post('/public/:token/sign', async (req, res) => {
       `Browser: ${agreement.signatureBrowser}`
     ].join('\n');
 
-    await sendMail({ to: agreement.contactEmail, subject: `הסכם חתום - ${agreement.candidateName}`, text });
-    await sendMail({ to: process.env.ADMIN_EMAIL || 'alef.shin.jobs@gmail.com', subject: `הסכם חתום - ${agreement.candidateName}`, text });
+    const emailResults = { employerSent: false, adminSent: false, errors: [] };
+    try {
+      const employerMail = await sendMail({ to: agreement.contactEmail, subject: `הסכם חתום - ${agreement.candidateName}`, text });
+      emailResults.employerSent = !employerMail?.skipped;
+    } catch (mailErr) {
+      emailResults.errors.push(`Employer email: ${mailErr.message}`);
+      console.error('Signed agreement employer email failed:', mailErr);
+    }
+    try {
+      const adminMail = await sendMail({ to: process.env.ADMIN_EMAIL || 'alef.shin.jobs@gmail.com', subject: `הסכם חתום - ${agreement.candidateName}`, text });
+      emailResults.adminSent = !adminMail?.skipped;
+    } catch (mailErr) {
+      emailResults.errors.push(`Admin email: ${mailErr.message}`);
+      console.error('Signed agreement admin email failed:', mailErr);
+    }
 
-    res.json({ message: 'Agreement signed', agreement });
+    res.json({ message: 'Agreement signed', agreement, emailResults });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Could not sign agreement' });

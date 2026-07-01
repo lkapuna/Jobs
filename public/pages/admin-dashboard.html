@@ -232,6 +232,17 @@
       z-index: 80;
     }
     .toast.show { opacity: 1; transform: translateY(0); }
+    .inline-status {
+      margin: 10px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #f8fafc;
+      color: #344054;
+      font-weight: 800;
+      display: none;
+    }
+    .inline-status.show { display: block; }
     .site-footer {
       margin-top: 18px;
       border-top: 1px solid var(--line);
@@ -271,7 +282,7 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.2.1</div>
+      <div class="version-chip">v1.2.2</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
@@ -349,6 +360,7 @@
             </select>
             <button onclick="loadAgreements()">רענן</button>
           </div>
+          <div id="agreementSendStatus" class="inline-status"></div>
           <div id="agreementsTable"></div>
         </div>
       </section>
@@ -359,7 +371,7 @@
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.2.1 · L.K Consulting</footer>
+      <footer class="site-footer">v1.2.2 · L.K Consulting</footer>
     </main>
   </div>
 
@@ -958,13 +970,22 @@
     }
 
     async function sendAgreement(id) {
+      const statusBox = document.getElementById('agreementSendStatus');
+      statusBox.textContent = 'שולח הסכם לחתימה...';
+      statusBox.classList.add('show');
       try {
         const result = await api(`/api/agreements/admin/${id}/send`, { method: 'POST', body: JSON.stringify({}) });
         if (result.link) await copyText(result.link);
-        showToast(result.skipped ? 'SMTP לא מוגדר. הקישור הועתק, אפשר לשלוח ידנית.' : 'ההסכם נשלח לחתימה והקישור הועתק.');
+        const message = result.skipped ? 'SMTP לא מוגדר. הקישור הועתק, אפשר לשלוח ידנית.' : 'ההסכם נשלח לחתימה והקישור הועתק.';
+        statusBox.textContent = message;
+        showToast(message);
+        alert(message);
         loadAgreements();
       } catch (err) {
-        showToast(`שליחת ההסכם נכשלה: ${err.message}`);
+        const message = `שליחת ההסכם נכשלה: ${err.message}`;
+        statusBox.textContent = message;
+        showToast(message);
+        alert(message);
       }
     }
     async function copyAgreementLink(token) {

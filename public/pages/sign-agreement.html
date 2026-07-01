@@ -55,11 +55,12 @@
       </div>
       <div class="actions">
         <button onclick="clearSignature()">נקה חתימה</button>
-        <button class="primary" onclick="submitSignature()">חתום על ההסכם</button>
+        <button class="primary" id="signButton" onclick="submitSignature()">חתום על ההסכם</button>
       </div>
+      <div id="signStatus" class="muted" style="margin-top:12px;font-weight:800"></div>
     </section>
   </main>
-  <footer>v1.2.1 · L.K Consulting</footer>
+  <footer>v1.2.2 · L.K Consulting</footer>
   <script>
     const token = new URLSearchParams(location.search).get('token');
     const statusEl = document.getElementById('status');
@@ -117,22 +118,35 @@
     async function submitSignature() {
       if (!document.getElementById('signerName').value.trim()) { alert('נא למלא שם חותם'); return; }
       if (!signed) { alert('נא לחתום בתוך אזור החתימה'); return; }
-      const res = await fetch(`/api/agreements/public/${token}/sign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          signerName: document.getElementById('signerName').value,
-          signerRole: document.getElementById('signerRole').value,
-          signerPhone: document.getElementById('signerPhone').value,
-          signerEmail: document.getElementById('signerEmail').value,
-          signatureDataUrl: canvas.toDataURL('image/png'),
-          device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) { alert(data.error || 'לא ניתן לחתום כרגע'); return; }
-      document.getElementById('signPanel').style.display = 'none';
-      statusEl.innerHTML = '<span class="success">ההסכם נחתם ונשמר בהצלחה.</span>';
+      const button = document.getElementById('signButton');
+      const signStatus = document.getElementById('signStatus');
+      button.disabled = true;
+      button.textContent = 'חותם ושומר...';
+      signStatus.textContent = 'שומר את החתימה, נא להמתין...';
+      try {
+        const res = await fetch(`/api/agreements/public/${token}/sign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            signerName: document.getElementById('signerName').value,
+            signerRole: document.getElementById('signerRole').value,
+            signerPhone: document.getElementById('signerPhone').value,
+            signerEmail: document.getElementById('signerEmail').value,
+            signatureDataUrl: canvas.toDataURL('image/png'),
+            device: /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop'
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'לא ניתן לחתום כרגע');
+        document.getElementById('signPanel').style.display = 'none';
+        statusEl.innerHTML = '<span class="success">ההסכם נחתם ונשמר בהצלחה.</span>';
+        alert('ההסכם נחתם ונשמר בהצלחה.');
+      } catch (err) {
+        signStatus.textContent = err.message || 'לא ניתן לחתום כרגע.';
+        alert(signStatus.textContent);
+        button.disabled = false;
+        button.textContent = 'חתום על ההסכם';
+      }
     }
 
     addEventListener('resize', resizeCanvas);
