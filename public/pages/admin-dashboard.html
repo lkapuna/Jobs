@@ -153,6 +153,21 @@
     tr:hover td { background: #fbfdff; }
     .muted { color: var(--muted); }
     .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .compact-table th, .compact-table td { padding: 8px 10px; vertical-align: middle; }
+    .compact-table button { padding: 6px 9px; font-size: 0.84rem; border-radius: 7px; line-height: 1.2; }
+    .compact-table .row-actions { gap: 4px; flex-wrap: nowrap; align-items: center; }
+    .job-title-cell { min-width: 360px; }
+    .job-title-cell strong { display: block; line-height: 1.25; }
+    .job-desc {
+      margin-top: 3px;
+      max-width: 720px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.35;
+    }
+    .job-count-cell, .job-actions-cell { white-space: nowrap; width: 1%; }
+    .job-meta-cell { white-space: nowrap; }
     .badge {
       display: inline-flex;
       border-radius: 999px;
@@ -303,7 +318,7 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.2.11</div>
+      <div class="version-chip">v1.2.14</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
@@ -392,7 +407,7 @@
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.2.11 · L.K Consulting</footer>
+      <footer class="site-footer">v1.2.14 · L.K Consulting</footer>
     </main>
   </div>
 
@@ -577,7 +592,10 @@
         <div class="dialog">
           <div class="dialog-head">
             <div><strong>${escapeHtml(candidate.fullName)}</strong><div class="muted">${escapeHtml(candidate.phone)} ${candidate.email ? ' | ' + escapeHtml(candidate.email) : ''}</div></div>
-            <button onclick="closeModal('candidateModal')">סגור</button>
+            <div class="row-actions">
+              <button class="danger" onclick="deleteCandidate('${candidate._id}', '${escapeHtml(candidate.fullName)}')">מחק עובד</button>
+              <button onclick="closeModal('candidateModal')">סגור</button>
+            </div>
           </div>
           <div class="dialog-body">
             <div class="tabs">
@@ -699,6 +717,7 @@
       if (!confirm(`למחוק את המועמד ${name}?`)) return;
       await api(`/api/recruitment/admin/candidates/${id}`, { method: 'DELETE' });
       showToast('המועמד נמחק');
+      closeModal('candidateModal');
       loadCandidates();
     }
     async function addNote() {
@@ -824,8 +843,8 @@
     async function loadJobs() {
       state.jobs = await api('/api/admin/jobs');
       document.getElementById('jobsTable').innerHTML = state.jobs.length ? `
-        <table><thead><tr><th>משרה</th><th>קטגוריה</th><th>אזור</th><th>שכר</th><th>סטטוס</th><th>מועמדים</th><th>פעולות</th></tr></thead><tbody>
-          ${state.jobs.map(j => `<tr><td><strong>${escapeHtml(j.title)}</strong><div class="muted">${escapeHtml(j.description || '')}</div></td><td>${escapeHtml(j.category || j.profession)}</td><td>${escapeHtml(j.area)}</td><td>${j.hourlyRate ? '₪' + j.hourlyRate : '-'}</td><td>${j.status === 'closed' ? 'לא זמינה' : 'זמינה'}</td><td><button onclick="openJobCandidates('${j._id}', '${escapeHtml(j.title)}')">ראה מועמדים</button></td><td><div class="row-actions"><button onclick="openJobModal('${j._id}')">ערוך</button><button class="blue" onclick="toggleJobAvailability('${j._id}', '${j.status === 'closed' ? 'open' : 'closed'}')">${j.status === 'closed' ? 'הפוך לזמינה' : 'הפוך ללא זמינה'}</button><button class="danger" onclick="deleteJob('${j._id}', '${escapeHtml(j.title)}')">מחק</button></div></td></tr>`).join('')}
+        <table class="compact-table"><thead><tr><th>משרה</th><th>קטגוריה</th><th>אזור</th><th>שכר</th><th>סטטוס</th><th>מועמדים</th><th>פעולות</th></tr></thead><tbody>
+          ${state.jobs.map(j => `<tr><td class="job-title-cell"><strong>${escapeHtml(j.title)}</strong><div class="muted job-desc" title="${escapeHtml(j.description || '')}">${escapeHtml(j.description || '')}</div></td><td class="job-meta-cell">${escapeHtml(j.category || j.profession)}</td><td class="job-meta-cell">${escapeHtml(j.area)}</td><td class="job-meta-cell">${j.hourlyRate ? '₪' + j.hourlyRate : '-'}</td><td class="job-meta-cell">${j.status === 'closed' ? 'לא זמינה' : 'זמינה'}</td><td class="job-count-cell"><button onclick="openJobCandidates('${j._id}', '${escapeHtml(j.title)}')">מועמדים</button></td><td class="job-actions-cell"><div class="row-actions"><button onclick="openJobModal('${j._id}')">ערוך</button><button class="blue" onclick="toggleJobAvailability('${j._id}', '${j.status === 'closed' ? 'open' : 'closed'}')">${j.status === 'closed' ? 'זמינה' : 'לא זמינה'}</button><button class="danger" onclick="deleteJob('${j._id}', '${escapeHtml(j.title)}')">מחק</button></div></td></tr>`).join('')}
         </tbody></table>` : '<div style="padding:24px" class="muted">אין משרות עדיין.</div>';
     }
     async function openJobCandidates(jobId, title) {
@@ -925,12 +944,17 @@
             ${formField('emp-area', 'אזור', e.area)}
             <div class="field full"><label>הערות</label><textarea id="emp-notes">${escapeHtml(e.notes)}</textarea></div>
           </div>
-          <div class="dialog-foot"><button class="primary">שמור מעסיק</button></div>
+          <div class="dialog-foot"><span class="muted" id="employerSaveStatus"></span><button class="primary" id="employerSaveButton">שמור מעסיק</button></div>
         </form>`;
       document.getElementById('employerModal').classList.add('open');
     }
     async function saveEmployer(event, id) {
       event.preventDefault();
+      const button = document.getElementById('employerSaveButton');
+      const status = document.getElementById('employerSaveStatus');
+      button.disabled = true;
+      button.textContent = 'שומר...';
+      status.textContent = 'שומר מעסיק, נא להמתין...';
       const body = {
         businessName: document.getElementById('emp-businessName').value,
         contactName: document.getElementById('emp-contactName').value,
@@ -940,10 +964,17 @@
         area: document.getElementById('emp-area').value,
         notes: document.getElementById('emp-notes').value
       };
-      await api(id ? `/api/recruitment/admin/employers/${id}` : '/api/recruitment/admin/employers', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
-      closeModal('employerModal');
-      showToast('המעסיק נשמר');
-      loadEmployers();
+      try {
+        await api(id ? `/api/recruitment/admin/employers/${id}` : '/api/recruitment/admin/employers', { method: id ? 'PATCH' : 'POST', body: JSON.stringify(body) });
+        closeModal('employerModal');
+        showToast('המעסיק נשמר');
+        await loadEmployers();
+      } catch (err) {
+        status.textContent = err.message || 'לא ניתן לשמור את המעסיק כרגע.';
+        showToast(status.textContent);
+        button.disabled = false;
+        button.textContent = 'שמור מעסיק';
+      }
     }
 
     async function loadAgreements() {
