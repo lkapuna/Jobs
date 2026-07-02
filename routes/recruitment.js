@@ -322,6 +322,87 @@ router.get('/admin/candidates', ...adminOnly, async (req, res) => {
   }
 });
 
+router.post('/admin/candidates', ...adminOnly, upload.single('cv'), async (req, res) => {
+  try {
+    const {
+      jobId,
+      fullName,
+      identityNumber,
+      phone,
+      email,
+      city,
+      area,
+      experience,
+      availability,
+      salaryExpectations,
+      message,
+      categories,
+      status,
+      priority,
+      contactPerson
+    } = req.body;
+
+    if (!fullName || !phone) {
+      return res.status(400).json({ error: 'Full name and phone are required' });
+    }
+
+    const job = jobId ? await Job.findById(jobId) : null;
+    if (jobId && !job) return res.status(404).json({ error: 'Job not found' });
+
+    const cv = req.file ? {
+      originalName: req.file.originalname,
+      filename: req.file.filename,
+      path: req.file.path,
+      url: `/uploads/cvs/${req.file.filename}`,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      uploadedAt: new Date()
+    } : {};
+
+    const candidateCategories = Array.from(new Set([
+      job?.category || job?.profession,
+      ...categoryList(categories)
+    ].filter(Boolean)));
+
+    const applications = job ? [{
+      job: job._id,
+      jobTitle: job.title,
+      category: job.category || job.profession,
+      message: message || '',
+      status: 'new'
+    }] : [];
+
+    const notes = [];
+    if (message) notes.push({ type: 'general', text: `הערות המועמד למשרה: ${message}`, createdBy: req.user._id });
+
+    const candidate = new Candidate({
+      fullName,
+      identityNumber,
+      phone,
+      email,
+      city,
+      area,
+      experience,
+      availability,
+      salaryExpectations,
+      categories: candidateCategories,
+      status: status || 'new',
+      priority: priority || 'normal',
+      contactPerson,
+      consentToStore: true,
+      cv,
+      applications,
+      notes
+    });
+
+    await candidate.save();
+    res.status(201).json(candidate);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || 'Could not create candidate' });
+  }
+});
+
 router.get('/admin/jobs/:id/candidates', ...adminOnly, async (req, res) => {
   try {
     const candidates = await Candidate.find({ 'applications.job': req.params.id })

@@ -318,7 +318,7 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.2.15</div>
+      <div class="version-chip">v1.2.16</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
@@ -352,7 +352,7 @@
 
       <section id="section-candidates" class="section">
         <div class="panel">
-          <div class="panel-head"><span class="panel-title">מאגר מועמדים</span><span id="candidateCount" class="muted"></span></div>
+          <div class="panel-head"><span class="panel-title">מאגר מועמדים</span><div class="row-actions"><span id="candidateCount" class="muted"></span><button class="primary" onclick="openNewCandidateModal()">עובד חדש</button></div></div>
           <div class="filters">
             <input id="candidateQ" placeholder="שם, טלפון או אימייל" oninput="filterCandidates()">
             <select id="candidateStatus" onchange="filterCandidates()"></select>
@@ -407,11 +407,12 @@
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.2.15 · L.K Consulting</footer>
+      <footer class="site-footer">v1.2.16 · L.K Consulting</footer>
     </main>
   </div>
 
   <div class="modal" id="candidateModal"></div>
+  <div class="modal" id="newCandidateModal"></div>
   <div class="modal" id="jobModal"></div>
   <div class="modal" id="jobCandidatesModal"></div>
   <div class="modal" id="employerModal"></div>
@@ -503,7 +504,11 @@
     }
 
     async function api(path, options = {}) {
-      const res = await fetch(path, { ...options, headers: { ...headers(), ...(options.headers || {}) } });
+      const isFormData = options.body instanceof FormData;
+      const requestHeaders = isFormData
+        ? { Authorization: `Bearer ${token}`, ...(options.headers || {}) }
+        : { ...headers(), ...(options.headers || {}) };
+      const res = await fetch(path, { ...options, headers: requestHeaders });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Request failed');
       return data;
@@ -582,6 +587,83 @@
             `).join('')}
           </tbody>
         </table>`;
+    }
+
+    function openNewCandidateModal() {
+      const latestJobOptions = state.jobs.map(job => `<option value="${job._id}">${escapeHtml(job.title)}${job.area ? ' - ' + escapeHtml(job.area) : ''}</option>`).join('');
+      document.getElementById('newCandidateModal').innerHTML = `
+        <form class="dialog" id="newCandidateForm" onsubmit="saveNewCandidate(event)">
+          <div class="dialog-head">
+            <div><strong>עובד / מועמד חדש</strong><div class="muted">הוספה ידנית למאגר ושיוך למשרה קיימת</div></div>
+            <button type="button" onclick="closeModal('newCandidateModal')">סגור</button>
+          </div>
+          <div class="dialog-body">
+            <div class="grid">
+              ${formField('newCandidate-fullName', 'שם מלא', '', true)}
+              ${formField('newCandidate-identityNumber', 'תעודת זהות')}
+              ${formField('newCandidate-phone', 'טלפון', '', true)}
+              ${formField('newCandidate-email', 'אימייל', '', false, 'email')}
+              ${formField('newCandidate-area', 'אזור')}
+              ${formField('newCandidate-city', 'עיר')}
+              ${formField('newCandidate-availability', 'זמינות')}
+              ${formField('newCandidate-salaryExpectations', 'ציפיות שכר')}
+              ${formField('newCandidate-contactPerson', 'איש קשר / מקור')}
+              <div class="field"><label>משרה לשיוך</label><select id="newCandidate-jobId"><option value="">ללא שיוך למשרה</option>${latestJobOptions}</select></div>
+              <div class="field"><label>סטטוס</label><select id="newCandidate-status">${Object.entries(statusLabels).map(([v,l]) => `<option value="${v}" ${v === 'new' ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+              <div class="field"><label>עדיפות</label><select id="newCandidate-priority"><option value="normal">רגילה</option><option value="high">גבוהה</option><option value="low">נמוכה</option></select></div>
+              <div class="field full"><label>קטגוריות התאמה</label><input id="newCandidate-categories" placeholder="בריסטה, ברמן, עובד דלפק"></div>
+              <div class="field full"><label>ניסיון</label><textarea id="newCandidate-experience"></textarea></div>
+              <div class="field full"><label>הערות / הודעת המועמד למשרה</label><textarea id="newCandidate-message"></textarea></div>
+              <div class="field full"><label>קורות חיים</label><input id="newCandidate-cv" type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></div>
+            </div>
+          </div>
+          <div class="dialog-foot"><span class="muted" id="newCandidateStatus"></span><button class="primary" id="newCandidateSaveButton">שמור עובד</button></div>
+        </form>`;
+      document.getElementById('newCandidateModal').classList.add('open');
+    }
+
+    async function saveNewCandidate(event) {
+      event.preventDefault();
+      const button = document.getElementById('newCandidateSaveButton');
+      const status = document.getElementById('newCandidateStatus');
+      button.disabled = true;
+      button.textContent = 'שומר...';
+      status.textContent = 'שומר עובד ומעלה קורות חיים...';
+
+      const formData = new FormData();
+      const fields = {
+        fullName: 'newCandidate-fullName',
+        identityNumber: 'newCandidate-identityNumber',
+        phone: 'newCandidate-phone',
+        email: 'newCandidate-email',
+        area: 'newCandidate-area',
+        city: 'newCandidate-city',
+        availability: 'newCandidate-availability',
+        salaryExpectations: 'newCandidate-salaryExpectations',
+        contactPerson: 'newCandidate-contactPerson',
+        jobId: 'newCandidate-jobId',
+        status: 'newCandidate-status',
+        priority: 'newCandidate-priority',
+        categories: 'newCandidate-categories',
+        experience: 'newCandidate-experience',
+        message: 'newCandidate-message'
+      };
+      Object.entries(fields).forEach(([key, id]) => formData.append(key, document.getElementById(id).value));
+      const cv = document.getElementById('newCandidate-cv').files[0];
+      if (cv) formData.append('cv', cv);
+
+      try {
+        const candidate = await api('/api/recruitment/admin/candidates', { method: 'POST', body: formData, headers: {} });
+        closeModal('newCandidateModal');
+        showToast('העובד נשמר במאגר');
+        await loadCandidates();
+        await openCandidate(candidate._id);
+      } catch (err) {
+        status.textContent = err.message || 'לא ניתן לשמור את העובד כרגע.';
+        showToast(status.textContent);
+        button.disabled = false;
+        button.textContent = 'שמור עובד';
+      }
     }
 
     async function openCandidate(id) {
