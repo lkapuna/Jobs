@@ -175,6 +175,7 @@
       color: var(--muted);
       line-height: 1.55;
       flex: 1;
+      white-space: pre-line;
     }
     .job-details {
       display: grid;
@@ -187,6 +188,7 @@
     .job-details div {
       border-top: 1px solid var(--line);
       padding-top: 8px;
+      white-space: pre-line;
     }
     .job-details strong { color: var(--ink); }
     .empty, .loading {
@@ -396,7 +398,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
-  <footer class="site-footer">v1.2.14 · L.K Consulting <a href="/pages/login.html">כניסת אדמין</a></footer>
+  <footer class="site-footer">v1.2.15 · L.K Consulting <a href="/pages/login.html">כניסת אדמין</a></footer>
 
   <script>
     let jobs = [];
@@ -450,18 +452,14 @@
         <article class="job">
           <div>
             <h2>${escapeHtml(job.title)}</h2>
-            <div class="meta" style="margin-top:10px">
-              <span class="chip">${escapeHtml(job.area || 'אזור לא צוין')}</span>
-              <span class="chip">${escapeHtml(job.category || job.profession || 'כללי')}</span>
-              <span class="chip">${escapeHtml(job.jobType || 'קבועה')}</span>
-              ${job.hours ? `<span class="chip">${escapeHtml(job.hours)}</span>` : ''}
-            </div>
           </div>
           ${job.hourlyRate ? `<div class="pay">₪${fmt(job.hourlyRate)} לשעה</div>` : ''}
           <div class="desc">${escapeHtml(job.description || 'פרטים נוספים יימסרו בשיחה.')}</div>
           <div class="job-details">
             ${job.requirements ? `<div><strong>דרישות:</strong> ${escapeHtml(job.requirements)}</div>` : ''}
             ${job.benefits ? `<div><strong>יתרונות / תנאים:</strong> ${escapeHtml(job.benefits)}</div>` : ''}
+            ${job.area ? `<div><strong>אזור:</strong> ${escapeHtml(job.area)}</div>` : ''}
+            ${job.hours ? `<div><strong>שעות:</strong> ${escapeHtml(job.hours)}</div>` : ''}
             ${job.address ? `<div><strong>כתובת:</strong> ${escapeHtml(job.address)}</div>` : ''}
             ${job.days?.length ? `<div><strong>ימים:</strong> ${escapeHtml(job.days.join(', '))}</div>` : ''}
             ${job.employerName ? `<div><strong>מעסיק:</strong> ${escapeHtml(job.employerName)}</div>` : ''}
