@@ -77,6 +77,8 @@
       font-family: inherit;
       font-weight: 700;
       cursor: pointer;
+      display: block;
+      text-decoration: none;
     }
     .nav.active, .nav:hover { background: rgba(255,255,255,0.1); color: #fff; }
     .logout { margin-top: 22px; border: 1px solid rgba(255,255,255,0.2); }
@@ -318,7 +320,7 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.2.16</div>
+      <div class="version-chip">v1.2.17</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
@@ -326,6 +328,7 @@
         <button class="nav" onclick="showSection('employers')">מעסיקים</button>
         <button class="nav" onclick="showSection('agreements')">הסכמי השמה</button>
         <button class="nav" onclick="showSection('submissions')">שליחות למעסיקים</button>
+        <a class="nav" href="/pages/candidate-intake.html" target="_blank" rel="noopener">Candidate intake link</a>
         <button class="nav logout" onclick="logout()">יציאה</button>
       </nav>
     </aside>
@@ -407,7 +410,7 @@
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.2.16 · L.K Consulting</footer>
+      <footer class="site-footer">v1.2.17 · L.K Consulting</footer>
     </main>
   </div>
 
@@ -926,7 +929,7 @@
       state.jobs = await api('/api/admin/jobs');
       document.getElementById('jobsTable').innerHTML = state.jobs.length ? `
         <table class="compact-table"><thead><tr><th>משרה</th><th>קטגוריה</th><th>אזור</th><th>שכר</th><th>סטטוס</th><th>מועמדים</th><th>פעולות</th></tr></thead><tbody>
-          ${state.jobs.map(j => `<tr><td class="job-title-cell"><strong>${escapeHtml(j.title)}</strong><div class="muted job-desc" title="${escapeHtml(j.description || '')}">${escapeHtml(j.description || '')}</div></td><td class="job-meta-cell">${escapeHtml(j.category || j.profession)}</td><td class="job-meta-cell">${escapeHtml(j.area)}</td><td class="job-meta-cell">${j.hourlyRate ? '₪' + j.hourlyRate : '-'}</td><td class="job-meta-cell">${j.status === 'closed' ? 'לא זמינה' : 'זמינה'}</td><td class="job-count-cell"><button onclick="openJobCandidates('${j._id}', '${escapeHtml(j.title)}')">מועמדים</button></td><td class="job-actions-cell"><div class="row-actions"><button onclick="openJobModal('${j._id}')">ערוך</button><button class="blue" onclick="toggleJobAvailability('${j._id}', '${j.status === 'closed' ? 'open' : 'closed'}')">${j.status === 'closed' ? 'זמינה' : 'לא זמינה'}</button><button class="danger" onclick="deleteJob('${j._id}', '${escapeHtml(j.title)}')">מחק</button></div></td></tr>`).join('')}
+          ${state.jobs.map(j => `<tr><td class="job-title-cell"><strong>${escapeHtml(j.title)}</strong><div class="muted job-desc" title="${escapeHtml(j.description || '')}">${escapeHtml(j.description || '')}</div></td><td class="job-meta-cell">${escapeHtml(j.category || j.profession)}</td><td class="job-meta-cell">${escapeHtml(j.area)}</td><td class="job-meta-cell">${j.hourlyRate ? '₪' + j.hourlyRate : '-'}</td><td class="job-meta-cell">${j.status === 'closed' ? 'לא זמינה' : 'זמינה'}</td><td class="job-count-cell"><button onclick="openJobCandidates('${j._id}', '${escapeHtml(j.title)}')">מועמדים</button></td><td class="job-actions-cell"><div class="row-actions"><button onclick="openJobModal('${j._id}')">ערוך</button><button onclick="openJobModal('${j._id}', true)">שכפל</button><button class="blue" onclick="toggleJobAvailability('${j._id}', '${j.status === 'closed' ? 'open' : 'closed'}')">${j.status === 'closed' ? 'זמינה' : 'לא זמינה'}</button><button class="danger" onclick="deleteJob('${j._id}', '${escapeHtml(j.title)}')">מחק</button></div></td></tr>`).join('')}
         </tbody></table>` : '<div style="padding:24px" class="muted">אין משרות עדיין.</div>';
     }
     async function openJobCandidates(jobId, title) {
@@ -954,11 +957,13 @@
       showToast('המשרה נמחקה');
       loadJobs();
     }
-    function openJobModal(id = '') {
+    function openJobModal(id = '', duplicate = false) {
       const job = state.jobs.find(j => j._id === id) || {};
+      const formId = duplicate ? '' : id;
+      const heading = duplicate ? 'שכפול משרה' : id ? 'עריכת משרה' : 'משרה חדשה';
       document.getElementById('jobModal').innerHTML = `
-        <form class="dialog" onsubmit="saveJob(event, '${id}')">
-          <div class="dialog-head"><strong>${id ? 'עריכת משרה' : 'משרה חדשה'}</strong><button type="button" onclick="closeModal('jobModal')">סגור</button></div>
+        <form class="dialog" onsubmit="saveJob(event, '${formId}')">
+          <div class="dialog-head"><div><strong>${heading}</strong>${duplicate ? '<div class="muted">כל הפרטים הועתקו. שנה רק את שם המעסיק או כל שדה אחר ושמור כמשרה חדשה.</div>' : ''}</div><button type="button" onclick="closeModal('jobModal')">סגור</button></div>
           <div class="dialog-body grid">
             ${formField('job-title', 'שם משרה', job.title, true)}
             ${formField('job-category', 'קטגוריה', job.category || job.profession, true)}
