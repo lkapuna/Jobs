@@ -166,30 +166,32 @@ router.post('/admin/:id/send', ...adminOnly, async (req, res) => {
   try {
     const agreement = await PlacementAgreement.findById(req.params.id);
     if (!agreement) return res.status(404).json({ error: 'Agreement not found' });
-    if (!agreement.contactEmail) return res.status(400).json({ error: 'Employer email is missing' });
 
     agreement.status = 'sent';
     agreement.sentAt = new Date();
     await agreement.save();
 
     const link = `${appBaseUrl(req)}/pages/sign-agreement.html?token=${agreement.token}`;
-    const mailResult = await sendMailWithTimeout({
-      to: agreement.contactEmail,
-      replyTo: process.env.MAIL_REPLY_TO || process.env.SMTP_USER,
-      subject: `הסכם השמה לחתימה - ${agreement.candidateName || agreement.jobTitle}`,
-      text: [
-        'שלום,',
-        'מצורף קישור לחתימה דיגיטלית על הסכם השמה.',
-        link,
-        '',
-        agreementText(agreement)
-      ].join('\n')
-    });
+    const mailResult = agreement.contactEmail
+      ? await sendMailWithTimeout({
+        to: agreement.contactEmail,
+        replyTo: process.env.MAIL_REPLY_TO || process.env.SMTP_USER,
+        subject: `הסכם השמה לחתימה - ${agreement.candidateName || agreement.jobTitle}`,
+        text: [
+          'שלום,',
+          'מצורף קישור לחתימה דיגיטלית על הסכם ההשמה.',
+          link,
+          '',
+          agreementText(agreement)
+        ].join('\n')
+      })
+      : { skipped: true, linkOnly: true, error: 'Employer email is empty' };
 
     res.json({
-      message: mailResult?.timeout ? 'Email timed out' : mailResult?.skipped ? 'Email provider is not configured or delivery failed' : 'Agreement sent',
+      message: mailResult?.linkOnly ? 'Agreement link generated' : mailResult?.timeout ? 'Email timed out' : mailResult?.skipped ? 'Email provider is not configured or delivery failed' : 'Agreement sent',
       link,
       skipped: !!mailResult?.skipped,
+      linkOnly: !!mailResult?.linkOnly,
       timeout: !!mailResult?.timeout,
       emailError: mailResult?.error || ''
     });
@@ -308,13 +310,17 @@ router.post('/public/:token/sign', async (req, res) => {
     ].join('\n');
 
     const emailResults = { employerSent: false, adminSent: false, errors: [] };
-    try {
-      const employerMail = await sendMailWithTimeout({ to: agreement.contactEmail, subject: `הסכם חתום - ${agreement.candidateName}`, text });
-      emailResults.employerSent = !employerMail?.skipped;
-      if (employerMail?.timeout) emailResults.errors.push('Employer email: connection timeout');
-    } catch (mailErr) {
-      emailResults.errors.push(`Employer email: ${mailErr.message}`);
-      console.error('Signed agreement employer email failed:', mailErr);
+    if (agreement.contactEmail) {
+      try {
+        const employerMail = await sendMailWithTimeout({ to: agreement.contactEmail, subject: `הסכם חתום - ${agreement.candidateName}`, text });
+        emailResults.employerSent = !employerMail?.skipped;
+        if (employerMail?.timeout) emailResults.errors.push('Employer email: connection timeout');
+      } catch (mailErr) {
+        emailResults.errors.push(`Employer email: ${mailErr.message}`);
+        console.error('Signed agreement employer email failed:', mailErr);
+      }
+    } else {
+      emailResults.errors.push('Employer email skipped: empty email');
     }
     try {
       const adminMail = await sendMailWithTimeout({ to: process.env.ADMIN_EMAIL || 'alef.shin.jobs@gmail.com', subject: `הסכם חתום - ${agreement.candidateName}`, text });

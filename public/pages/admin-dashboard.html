@@ -320,7 +320,7 @@
         <img class="brand-logo" src="/assets/ash-hasama-logo.png" alt="לוגו א.ש השמת עובדים">
         <span>א.ש השמת עובדים</span>
       </div>
-      <div class="version-chip">v1.2.17</div>
+      <div class="version-chip">v1.2.18</div>
       <nav>
         <button class="nav active" onclick="showSection('overview')">סקירה</button>
         <button class="nav" onclick="showSection('candidates')">מועמדים</button>
@@ -410,7 +410,7 @@
           <div id="submissionsTable"></div>
         </div>
       </section>
-      <footer class="site-footer">v1.2.17 · L.K Consulting</footer>
+      <footer class="site-footer">v1.2.18 · L.K Consulting</footer>
     </main>
   </div>
 
@@ -1113,7 +1113,7 @@
             ${formField('agreement-businessAddress', 'כתובת')}
             ${formField('agreement-contactName', 'איש קשר')}
             ${formField('agreement-contactPhone', 'טלפון')}
-            ${formField('agreement-contactEmail', 'אימייל', '', true, 'email')}
+            ${formField('agreement-contactEmail', 'אימייל (אופציונלי - אפשר ליצור קישור בלי מייל)', '', false, 'email')}
             ${formField('agreement-candidateName', 'שם מועמד', '', true)}
             ${formField('agreement-candidatePhone', 'טלפון מועמד')}
             ${formField('agreement-candidateIdentityNumber', 'תעודת זהות מועמד')}
@@ -1178,11 +1178,13 @@
       try {
         const result = await api(`/api/agreements/admin/${id}/send`, { method: 'POST', body: JSON.stringify({}) });
         if (result.link) await copyText(result.link);
-        const message = result.timeout
-          ? `החיבור למייל נתקע או נחסם. הקישור הועתק, אפשר לשלוח ידנית. ${result.emailError || ''}`
-          : result.skipped
-            ? `המייל לא נשלח: ${result.emailError || 'ספק המייל לא מוגדר או שהשליחה נכשלה.'} הקישור הועתק, אפשר לשלוח ידנית.`
-            : 'ההסכם נשלח לחתימה והקישור הועתק.';
+        const message = result.linkOnly
+          ? 'קישור החתימה נוצר והועתק. לא הוגדר מייל למעסיק, אפשר לשלוח את הקישור ידנית.'
+          : result.timeout
+            ? `החיבור למייל נתקע או נחסם. הקישור הועתק, אפשר לשלוח ידנית. ${result.emailError || ''}`
+            : result.skipped
+              ? `המייל לא נשלח: ${result.emailError || 'ספק המייל לא מוגדר או שהשליחה נכשלה.'} הקישור הועתק, אפשר לשלוח ידנית.`
+              : 'ההסכם נשלח לחתימה והקישור הועתק.';
         statusBox.textContent = message;
         showToast(message);
         alert(message);
